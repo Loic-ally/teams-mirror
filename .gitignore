@@ -1,0 +1,9 @@
+.vscode
+.DS_Store
+myteams_server
+myteams_cli
+main_test.c
+*.o
+tmp
+.idea/
+build/
