@@ -1,0 +1,20 @@
+name: Sync to Repo 1
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo 2
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push vers repo 1
+        run: |
+          git remote add repo1 https://x-access-token:${{ secrets.REPO1_TOKEN }}@github.com:EpitechPGE2-2025/G-NWP-400-MLH-4-1-myteams-3.git
+          git push repo1 main
