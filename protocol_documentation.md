@@ -185,8 +185,7 @@ Events are sent asynchronously by the server to notify connected clients.
 
 All structures are packed (no padding). String fields are **null-padded**
 fixed-length arrays. Integer fields use the host platform's native
-representation for `int` and `time_t` — implementations MUST agree on
-endianness and sizes for cross-platform compatibility.
+representation for `int` and `std::uint64_t` — implementations MUST have a fixed endianess (big endian).
 
 ## 6.1 Client Request Payloads
 
@@ -261,7 +260,7 @@ endianness and sizes for cross-platform compatibility.
 |---|---|---|
 | `user_uuid` | `char[UUID_LENGTH]` | Unique identifier of the user |
 | `user_name` | `char[MAX_NAME_LENGTH]` | Display name of the user |
-| `user_status` | `int` | Connection status (`0` = offline, non-zero = online) |
+| `user_status` | `uint32_t` | Connection status (`0` = offline, non-zero = online) |
 
 ### 6.2.2 PayloadRplMessage
 *Used with:* `RPL_MESSAGES_LIST`
@@ -269,7 +268,7 @@ endianness and sizes for cross-platform compatibility.
 | Field | Type | Description |
 |---|---|---|
 | `sender_uuid` | `char[UUID_LENGTH]` | UUID of the message sender |
-| `message_timestamp` | `time_t` | UNIX timestamp of the message |
+| `message_timestamp` | `std::uint64_t` | UNIX timestamp of the message |
 | `message_body` | `char[MAX_BODY_LENGTH]` | Content of the message |
 
 ### 6.2.3 PayloadRplTeam
@@ -297,7 +296,7 @@ endianness and sizes for cross-platform compatibility.
 |---|---|---|
 | `thread_uuid` | `char[UUID_LENGTH]` | Unique identifier of the thread |
 | `user_uuid` | `char[UUID_LENGTH]` | UUID of the thread author |
-| `thread_timestamp` | `time_t` | UNIX timestamp of thread creation |
+| `thread_timestamp` | `std::uint64_t` | UNIX timestamp of thread creation |
 | `thread_title` | `char[MAX_NAME_LENGTH]` | Title of the thread |
 | `thread_body` | `char[MAX_BODY_LENGTH]` | Opening message body |
 
@@ -308,7 +307,7 @@ endianness and sizes for cross-platform compatibility.
 |---|---|---|
 | `thread_uuid` | `char[UUID_LENGTH]` | UUID of the parent thread |
 | `user_uuid` | `char[UUID_LENGTH]` | UUID of the reply author |
-| `reply_timestamp` | `time_t` | UNIX timestamp of the reply |
+| `reply_timestamp` | `std::uint64_t` | UNIX timestamp of the reply |
 | `reply_body` | `char[MAX_BODY_LENGTH]` | Content of the reply |
 
 ---
@@ -356,7 +355,7 @@ endianness and sizes for cross-platform compatibility.
 |---|---|---|
 | `thread_uuid` | `char[UUID_LENGTH]` | UUID of the new thread |
 | `user_uuid` | `char[UUID_LENGTH]` | UUID of the thread author |
-| `thread_timestamp` | `time_t` | UNIX timestamp of creation |
+| `thread_timestamp` | `std::uint64_t` | UNIX timestamp of creation |
 | `thread_title` | `char[MAX_NAME_LENGTH]` | Title of the thread |
 | `thread_body` | `char[MAX_BODY_LENGTH]` | Opening message body |
 

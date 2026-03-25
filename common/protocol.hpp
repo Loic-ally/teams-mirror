@@ -2,7 +2,6 @@
 #define PROTOCOL_HPP
 
 #include "limits.hpp"
-#include <time.h>
 
 namespace myteams {
 
@@ -130,7 +129,7 @@ namespace myteams {
     {
         char user_uuid[UUID_LENGTH];
         char user_name[MAX_NAME_LENGTH];
-        int user_status;
+        std::uint32_t user_status;
     };
 
     //serv -> cli
@@ -138,7 +137,7 @@ namespace myteams {
     PayloadRplMessage
     {
         char sender_uuid[UUID_LENGTH];
-        time_t message_timestamp;
+        std::uint64_t message_timestamp;
         char message_body[MAX_BODY_LENGTH];
     };
 
@@ -166,7 +165,7 @@ namespace myteams {
     {
         char thread_uuid[UUID_LENGTH];
         char user_uuid[UUID_LENGTH];
-        time_t thread_timestamp;
+        std::uint64_t thread_timestamp;
         char thread_title[MAX_NAME_LENGTH];
         char thread_body[MAX_BODY_LENGTH];
     };
@@ -177,7 +176,7 @@ namespace myteams {
     {
         char thread_uuid[UUID_LENGTH];
         char user_uuid[UUID_LENGTH];
-        time_t reply_timestamp;
+        std::uint64_t reply_timestamp;
         char reply_body[MAX_BODY_LENGTH];
     };
 
@@ -221,7 +220,7 @@ namespace myteams {
     {
         char thread_uuid[UUID_LENGTH];
         char user_uuid[UUID_LENGTH];
-        time_t thread_timestamp;
+        std::uint64_t thread_timestamp;
         char thread_title[MAX_NAME_LENGTH];
         char thread_body[MAX_BODY_LENGTH];
     };

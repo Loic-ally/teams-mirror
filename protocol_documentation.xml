@@ -307,8 +307,7 @@ end of list.</t>
 
 <t>All structures are packed (no padding). String fields are <strong>null-padded</strong>
 fixed-length arrays. Integer fields use the host platform's native
-representation for <spanx style="verb">int</spanx> and <spanx style="verb">time_t</spanx> — implementations MUST agree on
-endianness and sizes for cross-platform compatibility.</t>
+representation for <spanx style="verb">int</spanx> and <spanx style="verb">std::uint64_t</spanx> — implementations MUST have a fixed endianess (big endian).</t>
 
 <section anchor="client-request-payloads"><name>6.1 Client Request Payloads</name>
 
@@ -447,7 +446,7 @@ endianness and sizes for cross-platform compatibility.</t>
       <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
       <c>Display name of the user</c>
       <c><spanx style="verb">user_status</spanx></c>
-      <c><spanx style="verb">int</spanx></c>
+      <c><spanx style="verb">uint32_t</spanx></c>
       <c>Connection status (<spanx style="verb">0</spanx> = offline, non-zero = online)</c>
 </texttable>
 
@@ -463,7 +462,7 @@ endianness and sizes for cross-platform compatibility.</t>
       <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
       <c>UUID of the message sender</c>
       <c><spanx style="verb">message_timestamp</spanx></c>
-      <c><spanx style="verb">time_t</spanx></c>
+      <c><spanx style="verb">std::uint64_t</spanx></c>
       <c>UNIX timestamp of the message</c>
       <c><spanx style="verb">message_body</spanx></c>
       <c><spanx style="verb">char[MAX_BODY_LENGTH]</spanx></c>
@@ -523,7 +522,7 @@ endianness and sizes for cross-platform compatibility.</t>
       <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
       <c>UUID of the thread author</c>
       <c><spanx style="verb">thread_timestamp</spanx></c>
-      <c><spanx style="verb">time_t</spanx></c>
+      <c><spanx style="verb">std::uint64_t</spanx></c>
       <c>UNIX timestamp of thread creation</c>
       <c><spanx style="verb">thread_title</spanx></c>
       <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
@@ -548,7 +547,7 @@ endianness and sizes for cross-platform compatibility.</t>
       <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
       <c>UUID of the reply author</c>
       <c><spanx style="verb">reply_timestamp</spanx></c>
-      <c><spanx style="verb">time_t</spanx></c>
+      <c><spanx style="verb">std::uint64_t</spanx></c>
       <c>UNIX timestamp of the reply</c>
       <c><spanx style="verb">reply_body</spanx></c>
       <c><spanx style="verb">char[MAX_BODY_LENGTH]</spanx></c>
@@ -645,7 +644,7 @@ endianness and sizes for cross-platform compatibility.</t>
       <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
       <c>UUID of the thread author</c>
       <c><spanx style="verb">thread_timestamp</spanx></c>
-      <c><spanx style="verb">time_t</spanx></c>
+      <c><spanx style="verb">std::uint64_t</spanx></c>
       <c>UNIX timestamp of creation</c>
       <c><spanx style="verb">thread_title</spanx></c>
       <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
