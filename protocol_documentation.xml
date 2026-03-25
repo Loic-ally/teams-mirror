@@ -1,0 +1,833 @@
+<t>```
+Network Working Group                                     MyTeams Project
+Request for Comments: XXXX                                    March 2025
+Category: Informational</t>
+
+<figure><artwork><![CDATA[
+             MyTeams Binary Communication Protocol (MTCP)
+                        Specification v1.0 ```
+]]></artwork></figure>
+
+<t><vspace blankLines='999' /></t>
+
+<section anchor="status-of-this-memo"><name>Status of This Memo</name>
+
+<t>This document defines the MyTeams Communication Protocol (MTCP), a binary
+client/server protocol for a team messaging application. Distribution of
+this memo is unlimited.</t>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+<section anchor="abstract"><name>Abstract</name>
+
+<t>This document specifies the MyTeams Communication Protocol (MTCP), a
+binary, length-prefixed protocol used for communication between MyTeams
+clients and servers. It defines the packet framing, command identifiers,
+status/event codes, and all associated payload structures.</t>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+<section anchor="table-of-contents"><name>Table of Contents</name>
+
+<t><list style="numbers" type="1">
+  <t><xref target="1-introduction">Introduction</xref></t>
+  <t><xref target="2-conventions-and-terminology">Conventions and Terminology</xref></t>
+  <t><xref target="3-packet-framing">Packet Framing</xref></t>
+  <t><xref target="4-command-codes-client--server">Command Codes (Client → Server)</xref></t>
+  <t><xref target="5-status-codes-server--client">Status Codes (Server → Client)</xref></t>
+  <t><xref target="6-payload-structures">Payload Structures</xref>
+  <list style="symbols">
+      <t>6.1 <xref target="61-client-request-payloads">Client Request Payloads</xref></t>
+      <t>6.2 <xref target="62-server-reply-payloads">Server Reply Payloads</xref></t>
+      <t>6.3 <xref target="63-server-event-payloads">Server Event Payloads</xref></t>
+      <t>6.4 <xref target="64-error-payloads">Error Payloads</xref></t>
+    </list></t>
+  <t><xref target="7-commandresponse-reference">Command/Response Reference</xref></t>
+  <t><xref target="8-constants-and-limits">Constants and Limits</xref></t>
+  <t><xref target="9-security-considerations">Security Considerations</xref></t>
+</list></t>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+<section anchor="introduction"><name>1. Introduction</name>
+
+<t>MTCP is a compact binary protocol operating over a reliable, ordered
+stream transport (e.g., TCP). All messages consist of a fixed-size header
+followed by a variable-length payload. The protocol supports user
+authentication, private messaging, team/channel/thread management, and
+real-time event notification.</t>
+
+<t>All structures use <spanx style="verb">__attribute__((packed))</spanx> to suppress compiler padding,
+ensuring a consistent wire format across platforms and compilers.</t>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+<section anchor="conventions-and-terminology"><name>2. Conventions and Terminology</name>
+
+<t>The key words "MUST", "MUST NOT", "REQUIRED", "SHOULD", "MAY" in this
+document are to be interpreted as described in RFC 2119.</t>
+
+<t><strong>Definitions:</strong></t>
+
+<texttable>
+      <ttcol align='left'>Term</ttcol>
+      <ttcol align='left'>Definition</ttcol>
+      <c>Client</c>
+      <c>An endpoint initiating commands to the server</c>
+      <c>Server</c>
+      <c>The central entity processing commands and dispatching replies/events</c>
+      <c>UUID</c>
+      <c>A fixed-length identifier of <spanx style="verb">UUID_LENGTH</spanx> bytes</c>
+      <c>Command</c>
+      <c>A message sent from client to server</c>
+      <c>Reply</c>
+      <c>A message sent from server to client in response to a command</c>
+      <c>Event</c>
+      <c>An unsolicited message sent from server to client</c>
+</texttable>
+
+<t>All integer fields are <strong>unsigned 16-bit</strong> (<spanx style="verb">uint16_t</spanx>) in network byte
+order unless otherwise noted. String fields are <strong>null-padded</strong> fixed-length
+byte arrays.</t>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+<section anchor="packet-framing"><name>3. Packet Framing</name>
+
+<t>Every MTCP message begins with a <strong>PacketHeader</strong>, immediately followed by
+a payload of <spanx style="verb">payload_size</spanx> bytes.</t>
+
+<section anchor="packetheader"><name>3.1 PacketHeader</name>
+
+<t><spanx style="verb">
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|             code              |          payload_size         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Size</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">code</spanx></c>
+      <c><spanx style="verb">uint16_t</spanx></c>
+      <c>2 bytes</c>
+      <c>Command ID or Status Code</c>
+      <c><spanx style="verb">payload_size</spanx></c>
+      <c><spanx style="verb">uint16_t</spanx></c>
+      <c>2 bytes</c>
+      <c>Length of the following payload in bytes</c>
+</texttable>
+
+<t><list style="symbols">
+  <t>The <spanx style="verb">code</spanx> field contains either a <strong>CommandID</strong> (client → server) or a
+<strong>StatusCode</strong> (server → client).</t>
+  <t>A <spanx style="verb">payload_size</spanx> of <spanx style="verb">0</spanx> indicates a header-only packet (no payload follows).</t>
+  <t>Receivers MUST read exactly <spanx style="verb">payload_size</spanx> bytes after the header before
+processing the next message.</t>
+</list></t>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+</section>
+<section anchor="command-codes-client-server"><name>4. Command Codes (Client → Server)</name>
+
+<t>Commands are sent by the client to request an action from the server.</t>
+
+<texttable>
+      <ttcol align='left'>Name</ttcol>
+      <ttcol align='left'>Code</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">CMD_LOGIN</spanx></c>
+      <c><spanx style="verb">10</spanx></c>
+      <c>Authenticate with a username</c>
+      <c><spanx style="verb">CMD_LOGOUT</spanx></c>
+      <c><spanx style="verb">11</spanx></c>
+      <c>End the current session</c>
+      <c><spanx style="verb">CMD_USERS</spanx></c>
+      <c><spanx style="verb">20</spanx></c>
+      <c>List all known users</c>
+      <c><spanx style="verb">CMD_USER_INFO</spanx></c>
+      <c><spanx style="verb">21</spanx></c>
+      <c>Get information about a specific user</c>
+      <c><spanx style="verb">CMD_SEND</spanx></c>
+      <c><spanx style="verb">30</spanx></c>
+      <c>Send a private message to a user</c>
+      <c><spanx style="verb">CMD_MESSAGES</spanx></c>
+      <c><spanx style="verb">31</spanx></c>
+      <c>List messages with a specific user</c>
+      <c><spanx style="verb">CMD_SUBSCRIBE</spanx></c>
+      <c><spanx style="verb">40</spanx></c>
+      <c>Subscribe to a team</c>
+      <c><spanx style="verb">CMD_UNSUBSCRIBE</spanx></c>
+      <c><spanx style="verb">41</spanx></c>
+      <c>Unsubscribe from a team</c>
+      <c><spanx style="verb">CMD_SUBSCRIBED_LIST</spanx></c>
+      <c><spanx style="verb">42</spanx></c>
+      <c>List teams the current user is subscribed to</c>
+      <c><spanx style="verb">CMD_USE</spanx></c>
+      <c><spanx style="verb">50</spanx></c>
+      <c>Set the active team/channel/thread context</c>
+      <c><spanx style="verb">CMD_CREATE</spanx></c>
+      <c><spanx style="verb">60</spanx></c>
+      <c>Create a team, channel, thread, or reply</c>
+      <c><spanx style="verb">CMD_LIST</spanx></c>
+      <c><spanx style="verb">70</spanx></c>
+      <c>List teams, channels, or threads</c>
+      <c><spanx style="verb">CMD_INFO</spanx></c>
+      <c><spanx style="verb">80</spanx></c>
+      <c>Get info about the current context</c>
+</texttable>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+<section anchor="status-codes-server-client"><name>5. Status Codes (Server → Client)</name>
+
+<t>Status codes are used in reply and event packets from the server.</t>
+
+<section anchor="success-codes-2xx"><name>5.1 Success Codes (2xx)</name>
+
+<texttable>
+      <ttcol align='left'>Name</ttcol>
+      <ttcol align='left'>Code</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">200</spanx></c>
+      <c>Generic success</c>
+      <c><spanx style="verb">RPL_CREATED</spanx></c>
+      <c><spanx style="verb">201</spanx></c>
+      <c>Resource successfully created</c>
+      <c><spanx style="verb">RPL_USERS_LIST</spanx></c>
+      <c><spanx style="verb">202</spanx></c>
+      <c>Payload contains a user entry (repeated)</c>
+      <c><spanx style="verb">RPL_USER_INFO</spanx></c>
+      <c><spanx style="verb">203</spanx></c>
+      <c>Payload contains detailed user info</c>
+      <c><spanx style="verb">RPL_MESSAGES_LIST</spanx></c>
+      <c><spanx style="verb">204</spanx></c>
+      <c>Payload contains a message entry (repeated)</c>
+      <c><spanx style="verb">RPL_TEAMS_LIST</spanx></c>
+      <c><spanx style="verb">205</spanx></c>
+      <c>Payload contains a team entry (repeated)</c>
+      <c><spanx style="verb">RPL_CHANNELS_LIST</spanx></c>
+      <c><spanx style="verb">206</spanx></c>
+      <c>Payload contains a channel entry (repeated)</c>
+      <c><spanx style="verb">RPL_THREADS_LIST</spanx></c>
+      <c><spanx style="verb">207</spanx></c>
+      <c>Payload contains a thread entry (repeated)</c>
+      <c><spanx style="verb">RPL_REPLIES_LIST</spanx></c>
+      <c><spanx style="verb">208</spanx></c>
+      <c>Payload contains a reply entry (repeated)</c>
+      <c><spanx style="verb">RPL_SUBSCRIBED_LIST</spanx></c>
+      <c><spanx style="verb">209</spanx></c>
+      <c>Payload contains a subscribed team entry (repeated)</c>
+</texttable>
+
+<ul empty="true"><li>
+  <t><strong>Note on list replies:</strong> For commands returning multiple items, the
+server MUST send one packet per item, all with the same status code,
+followed by a final <spanx style="verb">RPL_OK</spanx> packet with <spanx style="verb">payload_size = 0</spanx> to signal
+end of list.</t>
+</li></ul>
+
+</section>
+<section anchor="error-codes-4xx-5xx"><name>5.2 Error Codes (4xx / 5xx)</name>
+
+<texttable>
+      <ttcol align='left'>Name</ttcol>
+      <ttcol align='left'>Code</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">ERR_BAD_REQUEST</spanx></c>
+      <c><spanx style="verb">400</spanx></c>
+      <c>Malformed command or invalid parameters</c>
+      <c><spanx style="verb">ERR_UNAUTHORIZED</spanx></c>
+      <c><spanx style="verb">401</spanx></c>
+      <c>Action requires authentication</c>
+      <c><spanx style="verb">ERR_FORBIDDEN</spanx></c>
+      <c><spanx style="verb">403</spanx></c>
+      <c>Authenticated user lacks permission</c>
+      <c><spanx style="verb">ERR_NOT_FOUND</spanx></c>
+      <c><spanx style="verb">404</spanx></c>
+      <c>Referenced resource does not exist</c>
+      <c><spanx style="verb">ERR_ALREADY_EXIST</spanx></c>
+      <c><spanx style="verb">409</spanx></c>
+      <c>Resource already exists</c>
+      <c><spanx style="verb">ERR_SERVER_INTERNAL</spanx></c>
+      <c><spanx style="verb">500</spanx></c>
+      <c>Unexpected server-side error</c>
+</texttable>
+
+</section>
+<section anchor="event-codes-6xx"><name>5.3 Event Codes (6xx)</name>
+
+<t>Events are sent asynchronously by the server to notify connected clients.</t>
+
+<texttable>
+      <ttcol align='left'>Name</ttcol>
+      <ttcol align='left'>Code</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">EVT_LOGGED_IN</spanx></c>
+      <c><spanx style="verb">600</spanx></c>
+      <c>A user has connected</c>
+      <c><spanx style="verb">EVT_LOGGED_OUT</spanx></c>
+      <c><spanx style="verb">601</spanx></c>
+      <c>A user has disconnected</c>
+      <c><spanx style="verb">EVT_PRIVATE_MSG_RCVD</spanx></c>
+      <c><spanx style="verb">602</spanx></c>
+      <c>A private message was received</c>
+      <c><spanx style="verb">EVT_TEAM_CREATED</spanx></c>
+      <c><spanx style="verb">603</spanx></c>
+      <c>A new team was created</c>
+      <c><spanx style="verb">EVT_CHANNEL_CREATED</spanx></c>
+      <c><spanx style="verb">604</spanx></c>
+      <c>A new channel was created</c>
+      <c><spanx style="verb">EVT_THREAD_CREATED</spanx></c>
+      <c><spanx style="verb">605</spanx></c>
+      <c>A new thread was created</c>
+      <c><spanx style="verb">EVT_REPLY_CREATED</spanx></c>
+      <c><spanx style="verb">606</spanx></c>
+      <c>A new reply was posted</c>
+</texttable>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+</section>
+<section anchor="payload-structures"><name>6. Payload Structures</name>
+
+<t>All structures are packed (no padding). String fields are <strong>null-padded</strong>
+fixed-length arrays. Integer fields use the host platform's native
+representation for <spanx style="verb">int</spanx> and <spanx style="verb">time_t</spanx> — implementations MUST agree on
+endianness and sizes for cross-platform compatibility.</t>
+
+<section anchor="client-request-payloads"><name>6.1 Client Request Payloads</name>
+
+<section anchor="payloadreqlogin"><name>6.1.1 PayloadReqLogin</name>
+<t><em>Used with:</em> <spanx style="verb">CMD_LOGIN</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">user_name</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>The username to log in as</c>
+</texttable>
+
+</section>
+<section anchor="payloadreqtargetuser"><name>6.1.2 PayloadReqTargetUser</name>
+<t><em>Used with:</em> <spanx style="verb">CMD_USER_INFO</spanx>, <spanx style="verb">CMD_SEND</spanx>, <spanx style="verb">CMD_MESSAGES</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">target_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the target user</c>
+</texttable>
+
+</section>
+<section anchor="payloadreqsendmsg"><name>6.1.3 PayloadReqSendMsg</name>
+<t><em>Used with:</em> <spanx style="verb">CMD_SEND</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">target_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the recipient</c>
+      <c><spanx style="verb">message_body</spanx></c>
+      <c><spanx style="verb">char[MAX_BODY_LENGTH]</spanx></c>
+      <c>Content of the private message</c>
+</texttable>
+
+</section>
+<section anchor="payloadreqteamtarget"><name>6.1.4 PayloadReqTeamTarget</name>
+<t><em>Used with:</em> <spanx style="verb">CMD_SUBSCRIBE</spanx>, <spanx style="verb">CMD_UNSUBSCRIBE</spanx>, <spanx style="verb">CMD_USE</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">team_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the target team</c>
+</texttable>
+
+</section>
+<section anchor="payloadreqcreateteam"><name>6.1.5 PayloadReqCreateTeam</name>
+<t><em>Used with:</em> <spanx style="verb">CMD_CREATE</spanx> (team context)</t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">team_name</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>Name of the team to create</c>
+      <c><spanx style="verb">team_description</spanx></c>
+      <c><spanx style="verb">char[MAX_DESCRIPTION_LENGTH]</spanx></c>
+      <c>Description of the team</c>
+</texttable>
+
+</section>
+<section anchor="payloadreqcreatechannel"><name>6.1.6 PayloadReqCreateChannel</name>
+<t><em>Used with:</em> <spanx style="verb">CMD_CREATE</spanx> (channel context)</t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">channel_name</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>Name of the channel to create</c>
+      <c><spanx style="verb">channel_description</spanx></c>
+      <c><spanx style="verb">char[MAX_DESCRIPTION_LENGTH]</spanx></c>
+      <c>Description of the channel</c>
+</texttable>
+
+</section>
+<section anchor="payloadreqcreatethread"><name>6.1.7 PayloadReqCreateThread</name>
+<t><em>Used with:</em> <spanx style="verb">CMD_CREATE</spanx> (thread context)</t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">thread_title</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>Title of the thread</c>
+      <c><spanx style="verb">thread_body</spanx></c>
+      <c><spanx style="verb">char[MAX_BODY_LENGTH]</spanx></c>
+      <c>Body/content of the opening message</c>
+</texttable>
+
+</section>
+<section anchor="payloadreqcreatereply"><name>6.1.8 PayloadReqCreateReply</name>
+<t><em>Used with:</em> <spanx style="verb">CMD_CREATE</spanx> (reply context)</t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">reply_body</spanx></c>
+      <c><spanx style="verb">char[MAX_BODY_LENGTH]</spanx></c>
+      <c>Content of the reply</c>
+</texttable>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+</section>
+<section anchor="server-reply-payloads"><name>6.2 Server Reply Payloads</name>
+
+<section anchor="payloadrpluser"><name>6.2.1 PayloadRplUser</name>
+<t><em>Used with:</em> <spanx style="verb">RPL_USERS_LIST</spanx>, <spanx style="verb">RPL_USER_INFO</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">user_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>Unique identifier of the user</c>
+      <c><spanx style="verb">user_name</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>Display name of the user</c>
+      <c><spanx style="verb">user_status</spanx></c>
+      <c><spanx style="verb">int</spanx></c>
+      <c>Connection status (<spanx style="verb">0</spanx> = offline, non-zero = online)</c>
+</texttable>
+
+</section>
+<section anchor="payloadrplmessage"><name>6.2.2 PayloadRplMessage</name>
+<t><em>Used with:</em> <spanx style="verb">RPL_MESSAGES_LIST</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">sender_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the message sender</c>
+      <c><spanx style="verb">message_timestamp</spanx></c>
+      <c><spanx style="verb">time_t</spanx></c>
+      <c>UNIX timestamp of the message</c>
+      <c><spanx style="verb">message_body</spanx></c>
+      <c><spanx style="verb">char[MAX_BODY_LENGTH]</spanx></c>
+      <c>Content of the message</c>
+</texttable>
+
+</section>
+<section anchor="payloadrplteam"><name>6.2.3 PayloadRplTeam</name>
+<t><em>Used with:</em> <spanx style="verb">RPL_TEAMS_LIST</spanx>, <spanx style="verb">RPL_SUBSCRIBED_LIST</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">team_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>Unique identifier of the team</c>
+      <c><spanx style="verb">team_name</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>Name of the team</c>
+      <c><spanx style="verb">team_description</spanx></c>
+      <c><spanx style="verb">char[MAX_DESCRIPTION_LENGTH]</spanx></c>
+      <c>Description of the team</c>
+</texttable>
+
+</section>
+<section anchor="payloadrplchannel"><name>6.2.4 PayloadRplChannel</name>
+<t><em>Used with:</em> <spanx style="verb">RPL_CHANNELS_LIST</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">channel_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>Unique identifier of the channel</c>
+      <c><spanx style="verb">channel_name</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>Name of the channel</c>
+      <c><spanx style="verb">channel_description</spanx></c>
+      <c><spanx style="verb">char[MAX_DESCRIPTION_LENGTH]</spanx></c>
+      <c>Description of the channel</c>
+</texttable>
+
+</section>
+<section anchor="payloadrplthread"><name>6.2.5 PayloadRplThread</name>
+<t><em>Used with:</em> <spanx style="verb">RPL_THREADS_LIST</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">thread_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>Unique identifier of the thread</c>
+      <c><spanx style="verb">user_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the thread author</c>
+      <c><spanx style="verb">thread_timestamp</spanx></c>
+      <c><spanx style="verb">time_t</spanx></c>
+      <c>UNIX timestamp of thread creation</c>
+      <c><spanx style="verb">thread_title</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>Title of the thread</c>
+      <c><spanx style="verb">thread_body</spanx></c>
+      <c><spanx style="verb">char[MAX_BODY_LENGTH]</spanx></c>
+      <c>Opening message body</c>
+</texttable>
+
+</section>
+<section anchor="payloadrplreply"><name>6.2.6 PayloadRplReply</name>
+<t><em>Used with:</em> <spanx style="verb">RPL_REPLIES_LIST</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">thread_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the parent thread</c>
+      <c><spanx style="verb">user_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the reply author</c>
+      <c><spanx style="verb">reply_timestamp</spanx></c>
+      <c><spanx style="verb">time_t</spanx></c>
+      <c>UNIX timestamp of the reply</c>
+      <c><spanx style="verb">reply_body</spanx></c>
+      <c><spanx style="verb">char[MAX_BODY_LENGTH]</spanx></c>
+      <c>Content of the reply</c>
+</texttable>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+</section>
+<section anchor="server-event-payloads"><name>6.3 Server Event Payloads</name>
+
+<section anchor="payloadevtuserconnection"><name>6.3.1 PayloadEvtUserConnection</name>
+<t><em>Used with:</em> <spanx style="verb">EVT_LOGGED_IN</spanx>, <spanx style="verb">EVT_LOGGED_OUT</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">user_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the connecting/disconnecting user</c>
+      <c><spanx style="verb">user_name</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>Name of the user</c>
+</texttable>
+
+</section>
+<section anchor="payloadevtprivatemsg"><name>6.3.2 PayloadEvtPrivateMsg</name>
+<t><em>Used with:</em> <spanx style="verb">EVT_PRIVATE_MSG_RCVD</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">sender_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the message sender</c>
+      <c><spanx style="verb">message_body</spanx></c>
+      <c><spanx style="verb">char[MAX_BODY_LENGTH]</spanx></c>
+      <c>Content of the private message</c>
+</texttable>
+
+</section>
+<section anchor="payloadevtteamcreated"><name>6.3.3 PayloadEvtTeamCreated</name>
+<t><em>Used with:</em> <spanx style="verb">EVT_TEAM_CREATED</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">team_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the newly created team</c>
+      <c><spanx style="verb">team_name</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>Name of the team</c>
+      <c><spanx style="verb">team_description</spanx></c>
+      <c><spanx style="verb">char[MAX_DESCRIPTION_LENGTH]</spanx></c>
+      <c>Description of the team</c>
+</texttable>
+
+</section>
+<section anchor="payloadevtchannelcreated"><name>6.3.4 PayloadEvtChannelCreated</name>
+<t><em>Used with:</em> <spanx style="verb">EVT_CHANNEL_CREATED</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">channel_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the newly created channel</c>
+      <c><spanx style="verb">channel_name</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>Name of the channel</c>
+      <c><spanx style="verb">channel_description</spanx></c>
+      <c><spanx style="verb">char[MAX_DESCRIPTION_LENGTH]</spanx></c>
+      <c>Description of the channel</c>
+</texttable>
+
+</section>
+<section anchor="payloadevtthreadcreated"><name>6.3.5 PayloadEvtThreadCreated</name>
+<t><em>Used with:</em> <spanx style="verb">EVT_THREAD_CREATED</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">thread_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the new thread</c>
+      <c><spanx style="verb">user_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the thread author</c>
+      <c><spanx style="verb">thread_timestamp</spanx></c>
+      <c><spanx style="verb">time_t</spanx></c>
+      <c>UNIX timestamp of creation</c>
+      <c><spanx style="verb">thread_title</spanx></c>
+      <c><spanx style="verb">char[MAX_NAME_LENGTH]</spanx></c>
+      <c>Title of the thread</c>
+      <c><spanx style="verb">thread_body</spanx></c>
+      <c><spanx style="verb">char[MAX_BODY_LENGTH]</spanx></c>
+      <c>Opening message body</c>
+</texttable>
+
+</section>
+<section anchor="payloadevtreplycreated"><name>6.3.6 PayloadEvtReplyCreated</name>
+<t><em>Used with:</em> <spanx style="verb">EVT_REPLY_CREATED</spanx></t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">team_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the team containing the thread</c>
+      <c><spanx style="verb">thread_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the parent thread</c>
+      <c><spanx style="verb">user_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the reply author</c>
+      <c><spanx style="verb">reply_body</spanx></c>
+      <c><spanx style="verb">char[MAX_BODY_LENGTH]</spanx></c>
+      <c>Content of the reply</c>
+</texttable>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+</section>
+<section anchor="error-payloads"><name>6.4 Error Payloads</name>
+
+<section anchor="payloaderrunknown"><name>6.4.1 PayloadErrUnknown</name>
+<t><em>Used with:</em> <spanx style="verb">ERR_NOT_FOUND</spanx> (when the unknown entity has a UUID)</t>
+
+<texttable>
+      <ttcol align='left'>Field</ttcol>
+      <ttcol align='left'>Type</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">unknown_uuid</spanx></c>
+      <c><spanx style="verb">char[UUID_LENGTH]</spanx></c>
+      <c>UUID of the resource that was not found</c>
+</texttable>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+</section>
+</section>
+<section anchor="commandresponse-reference"><name>7. Command/Response Reference</name>
+
+<t>This section summarizes the expected request payload and possible server
+responses for each command.</t>
+
+<texttable>
+      <ttcol align='left'>Command</ttcol>
+      <ttcol align='left'>Request Payload</ttcol>
+      <ttcol align='left'>Success Response(s)</ttcol>
+      <ttcol align='left'>Error Response(s)</ttcol>
+      <c><spanx style="verb">CMD_LOGIN</spanx></c>
+      <c><spanx style="verb">PayloadReqLogin</spanx></c>
+      <c><spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_ALREADY_EXIST</spanx>, <spanx style="verb">ERR_BAD_REQUEST</spanx></c>
+      <c><spanx style="verb">CMD_LOGOUT</spanx></c>
+      <c><em>(none)</em></c>
+      <c><spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_UNAUTHORIZED</spanx></c>
+      <c><spanx style="verb">CMD_USERS</spanx></c>
+      <c><em>(none)</em></c>
+      <c><spanx style="verb">RPL_USERS_LIST</spanx> × N, <spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_UNAUTHORIZED</spanx></c>
+      <c><spanx style="verb">CMD_USER_INFO</spanx></c>
+      <c><spanx style="verb">PayloadReqTargetUser</spanx></c>
+      <c><spanx style="verb">RPL_USER_INFO</spanx></c>
+      <c><spanx style="verb">ERR_NOT_FOUND</spanx>, <spanx style="verb">ERR_UNAUTHORIZED</spanx></c>
+      <c><spanx style="verb">CMD_SEND</spanx></c>
+      <c><spanx style="verb">PayloadReqSendMsg</spanx></c>
+      <c><spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_NOT_FOUND</spanx>, <spanx style="verb">ERR_UNAUTHORIZED</spanx></c>
+      <c><spanx style="verb">CMD_MESSAGES</spanx></c>
+      <c><spanx style="verb">PayloadReqTargetUser</spanx></c>
+      <c><spanx style="verb">RPL_MESSAGES_LIST</spanx> × N, <spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_NOT_FOUND</spanx>, <spanx style="verb">ERR_UNAUTHORIZED</spanx></c>
+      <c><spanx style="verb">CMD_SUBSCRIBE</spanx></c>
+      <c><spanx style="verb">PayloadReqTeamTarget</spanx></c>
+      <c><spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_NOT_FOUND</spanx>, <spanx style="verb">ERR_ALREADY_EXIST</spanx></c>
+      <c><spanx style="verb">CMD_UNSUBSCRIBE</spanx></c>
+      <c><spanx style="verb">PayloadReqTeamTarget</spanx></c>
+      <c><spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_NOT_FOUND</spanx>, <spanx style="verb">ERR_FORBIDDEN</spanx></c>
+      <c><spanx style="verb">CMD_SUBSCRIBED_LIST</spanx></c>
+      <c><em>(none)</em></c>
+      <c><spanx style="verb">RPL_SUBSCRIBED_LIST</spanx> × N, <spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_UNAUTHORIZED</spanx></c>
+      <c><spanx style="verb">CMD_USE</spanx></c>
+      <c><spanx style="verb">PayloadReqTeamTarget</spanx></c>
+      <c><spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_NOT_FOUND</spanx>, <spanx style="verb">ERR_FORBIDDEN</spanx></c>
+      <c><spanx style="verb">CMD_CREATE</spanx> (team)</c>
+      <c><spanx style="verb">PayloadReqCreateTeam</spanx></c>
+      <c><spanx style="verb">RPL_CREATED</spanx> + <spanx style="verb">EVT_TEAM_CREATED</spanx> → all</c>
+      <c><spanx style="verb">ERR_ALREADY_EXIST</spanx></c>
+      <c><spanx style="verb">CMD_CREATE</spanx> (channel)</c>
+      <c><spanx style="verb">PayloadReqCreateChannel</spanx></c>
+      <c><spanx style="verb">RPL_CREATED</spanx> + <spanx style="verb">EVT_CHANNEL_CREATED</spanx> → subscribers</c>
+      <c><spanx style="verb">ERR_ALREADY_EXIST</spanx>, <spanx style="verb">ERR_FORBIDDEN</spanx></c>
+      <c><spanx style="verb">CMD_CREATE</spanx> (thread)</c>
+      <c><spanx style="verb">PayloadReqCreateThread</spanx></c>
+      <c><spanx style="verb">RPL_CREATED</spanx> + <spanx style="verb">EVT_THREAD_CREATED</spanx> → subscribers</c>
+      <c><spanx style="verb">ERR_FORBIDDEN</spanx></c>
+      <c><spanx style="verb">CMD_CREATE</spanx> (reply)</c>
+      <c><spanx style="verb">PayloadReqCreateReply</spanx></c>
+      <c><spanx style="verb">RPL_CREATED</spanx> + <spanx style="verb">EVT_REPLY_CREATED</spanx> → subscribers</c>
+      <c><spanx style="verb">ERR_FORBIDDEN</spanx></c>
+      <c><spanx style="verb">CMD_LIST</spanx> (teams)</c>
+      <c><em>(none)</em></c>
+      <c><spanx style="verb">RPL_TEAMS_LIST</spanx> × N, <spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_UNAUTHORIZED</spanx></c>
+      <c><spanx style="verb">CMD_LIST</spanx> (channels)</c>
+      <c><em>(none)</em></c>
+      <c><spanx style="verb">RPL_CHANNELS_LIST</spanx> × N, <spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_FORBIDDEN</spanx></c>
+      <c><spanx style="verb">CMD_LIST</spanx> (threads)</c>
+      <c><em>(none)</em></c>
+      <c><spanx style="verb">RPL_THREADS_LIST</spanx> × N, <spanx style="verb">RPL_OK</spanx></c>
+      <c><spanx style="verb">ERR_FORBIDDEN</spanx></c>
+      <c><spanx style="verb">CMD_INFO</spanx></c>
+      <c><em>(none)</em></c>
+      <c>Context-dependent reply</c>
+      <c><spanx style="verb">ERR_BAD_REQUEST</spanx></c>
+</texttable>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+<section anchor="constants-and-limits"><name>8. Constants and Limits</name>
+
+<t>The following constants are defined in <spanx style="verb">limits.hpp</spanx> and govern all field
+sizes in this protocol. Implementations MUST use identical values on both
+client and server.</t>
+
+<texttable>
+      <ttcol align='left'>Constant</ttcol>
+      <ttcol align='left'>Description</ttcol>
+      <c><spanx style="verb">UUID_LENGTH</spanx></c>
+      <c>Fixed byte length of all UUID strings</c>
+      <c><spanx style="verb">MAX_NAME_LENGTH</spanx></c>
+      <c>Maximum length of name fields (teams, channels, users)</c>
+      <c><spanx style="verb">MAX_DESCRIPTION_LENGTH</spanx></c>
+      <c>Maximum length of description fields</c>
+      <c><spanx style="verb">MAX_BODY_LENGTH</spanx></c>
+      <c>Maximum length of message/thread/reply body fields</c>
+</texttable>
+
+<ul empty="true"><li>
+  <t>The exact numeric values of these constants are defined in <spanx style="verb">limits.hpp</spanx>
+and are not specified here to allow future revision without updating
+this document.</t>
+</li></ul>
+
+<t><vspace blankLines='999' /></t>
+
+</section>
+<section anchor="security-considerations"><name>9. Security Considerations</name>
+
+<t><list style="symbols">
+  <t>MTCP does not include built-in encryption. It is RECOMMENDED to run MTCP
+over TLS to protect message confidentiality and integrity.</t>
+  <t>Authentication (<spanx style="verb">CMD_LOGIN</spanx>) relies solely on a username with no
+password or challenge-response mechanism. Deployments SHOULD add
+authentication at the transport layer.</t>
+  <t>The server MUST validate <spanx style="verb">payload_size</spanx> before reading payload bytes to
+prevent buffer overflows.</t>
+  <t>Fixed-length string fields MUST be null-terminated within the buffer;
+receivers MUST NOT assume null-termination beyond <spanx style="verb">payload_size</spanx>.</t>
+</list></t>
+
+<t><vspace blankLines='999' /></t>
+</section>

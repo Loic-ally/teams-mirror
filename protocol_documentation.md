@@ -10,7 +10,7 @@ Category: Informational
 
 ---
 
-## Status of This Memo
+# Status of This Memo
 
 This document defines the MyTeams Communication Protocol (MTCP), a binary
 client/server protocol for a team messaging application. Distribution of
@@ -18,7 +18,7 @@ this memo is unlimited.
 
 ---
 
-## Abstract
+# Abstract
 
 This document specifies the MyTeams Communication Protocol (MTCP), a
 binary, length-prefixed protocol used for communication between MyTeams
@@ -27,7 +27,7 @@ status/event codes, and all associated payload structures.
 
 ---
 
-## Table of Contents
+# Table of Contents
 
 1. [Introduction](#1-introduction)
 2. [Conventions and Terminology](#2-conventions-and-terminology)
@@ -45,7 +45,7 @@ status/event codes, and all associated payload structures.
 
 ---
 
-## 1. Introduction
+# 1. Introduction
 
 MTCP is a compact binary protocol operating over a reliable, ordered
 stream transport (e.g., TCP). All messages consist of a fixed-size header
@@ -58,7 +58,7 @@ ensuring a consistent wire format across platforms and compilers.
 
 ---
 
-## 2. Conventions and Terminology
+# 2. Conventions and Terminology
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHOULD", "MAY" in this
 document are to be interpreted as described in RFC 2119.
@@ -80,12 +80,12 @@ byte arrays.
 
 ---
 
-## 3. Packet Framing
+# 3. Packet Framing
 
 Every MTCP message begins with a **PacketHeader**, immediately followed by
 a payload of `payload_size` bytes.
 
-### 3.1 PacketHeader
+## 3.1 PacketHeader
 
 ```
  0                   1                   2                   3
@@ -108,7 +108,7 @@ a payload of `payload_size` bytes.
 
 ---
 
-## 4. Command Codes (Client → Server)
+# 4. Command Codes (Client → Server)
 
 Commands are sent by the client to request an action from the server.
 
@@ -130,11 +130,11 @@ Commands are sent by the client to request an action from the server.
 
 ---
 
-## 5. Status Codes (Server → Client)
+# 5. Status Codes (Server → Client)
 
 Status codes are used in reply and event packets from the server.
 
-### 5.1 Success Codes (2xx)
+## 5.1 Success Codes (2xx)
 
 | Name | Code | Description |
 |---|---|---|
@@ -154,7 +154,7 @@ Status codes are used in reply and event packets from the server.
 > followed by a final `RPL_OK` packet with `payload_size = 0` to signal
 > end of list.
 
-### 5.2 Error Codes (4xx / 5xx)
+## 5.2 Error Codes (4xx / 5xx)
 
 | Name | Code | Description |
 |---|---|---|
@@ -165,7 +165,7 @@ Status codes are used in reply and event packets from the server.
 | `ERR_ALREADY_EXIST` | `409` | Resource already exists |
 | `ERR_SERVER_INTERNAL` | `500` | Unexpected server-side error |
 
-### 5.3 Event Codes (6xx)
+## 5.3 Event Codes (6xx)
 
 Events are sent asynchronously by the server to notify connected clients.
 
@@ -181,30 +181,30 @@ Events are sent asynchronously by the server to notify connected clients.
 
 ---
 
-## 6. Payload Structures
+# 6. Payload Structures
 
 All structures are packed (no padding). String fields are **null-padded**
 fixed-length arrays. Integer fields use the host platform's native
 representation for `int` and `time_t` — implementations MUST agree on
 endianness and sizes for cross-platform compatibility.
 
-### 6.1 Client Request Payloads
+## 6.1 Client Request Payloads
 
-#### 6.1.1 PayloadReqLogin
+### 6.1.1 PayloadReqLogin
 *Used with:* `CMD_LOGIN`
 
 | Field | Type | Description |
 |---|---|---|
 | `user_name` | `char[MAX_NAME_LENGTH]` | The username to log in as |
 
-#### 6.1.2 PayloadReqTargetUser
+### 6.1.2 PayloadReqTargetUser
 *Used with:* `CMD_USER_INFO`, `CMD_SEND`, `CMD_MESSAGES`
 
 | Field | Type | Description |
 |---|---|---|
 | `target_uuid` | `char[UUID_LENGTH]` | UUID of the target user |
 
-#### 6.1.3 PayloadReqSendMsg
+### 6.1.3 PayloadReqSendMsg
 *Used with:* `CMD_SEND`
 
 | Field | Type | Description |
@@ -212,14 +212,14 @@ endianness and sizes for cross-platform compatibility.
 | `target_uuid` | `char[UUID_LENGTH]` | UUID of the recipient |
 | `message_body` | `char[MAX_BODY_LENGTH]` | Content of the private message |
 
-#### 6.1.4 PayloadReqTeamTarget
+### 6.1.4 PayloadReqTeamTarget
 *Used with:* `CMD_SUBSCRIBE`, `CMD_UNSUBSCRIBE`, `CMD_USE`
 
 | Field | Type | Description |
 |---|---|---|
 | `team_uuid` | `char[UUID_LENGTH]` | UUID of the target team |
 
-#### 6.1.5 PayloadReqCreateTeam
+### 6.1.5 PayloadReqCreateTeam
 *Used with:* `CMD_CREATE` (team context)
 
 | Field | Type | Description |
@@ -227,7 +227,7 @@ endianness and sizes for cross-platform compatibility.
 | `team_name` | `char[MAX_NAME_LENGTH]` | Name of the team to create |
 | `team_description` | `char[MAX_DESCRIPTION_LENGTH]` | Description of the team |
 
-#### 6.1.6 PayloadReqCreateChannel
+### 6.1.6 PayloadReqCreateChannel
 *Used with:* `CMD_CREATE` (channel context)
 
 | Field | Type | Description |
@@ -235,7 +235,7 @@ endianness and sizes for cross-platform compatibility.
 | `channel_name` | `char[MAX_NAME_LENGTH]` | Name of the channel to create |
 | `channel_description` | `char[MAX_DESCRIPTION_LENGTH]` | Description of the channel |
 
-#### 6.1.7 PayloadReqCreateThread
+### 6.1.7 PayloadReqCreateThread
 *Used with:* `CMD_CREATE` (thread context)
 
 | Field | Type | Description |
@@ -243,7 +243,7 @@ endianness and sizes for cross-platform compatibility.
 | `thread_title` | `char[MAX_NAME_LENGTH]` | Title of the thread |
 | `thread_body` | `char[MAX_BODY_LENGTH]` | Body/content of the opening message |
 
-#### 6.1.8 PayloadReqCreateReply
+### 6.1.8 PayloadReqCreateReply
 *Used with:* `CMD_CREATE` (reply context)
 
 | Field | Type | Description |
@@ -252,9 +252,9 @@ endianness and sizes for cross-platform compatibility.
 
 ---
 
-### 6.2 Server Reply Payloads
+## 6.2 Server Reply Payloads
 
-#### 6.2.1 PayloadRplUser
+### 6.2.1 PayloadRplUser
 *Used with:* `RPL_USERS_LIST`, `RPL_USER_INFO`
 
 | Field | Type | Description |
@@ -263,7 +263,7 @@ endianness and sizes for cross-platform compatibility.
 | `user_name` | `char[MAX_NAME_LENGTH]` | Display name of the user |
 | `user_status` | `int` | Connection status (`0` = offline, non-zero = online) |
 
-#### 6.2.2 PayloadRplMessage
+### 6.2.2 PayloadRplMessage
 *Used with:* `RPL_MESSAGES_LIST`
 
 | Field | Type | Description |
@@ -272,7 +272,7 @@ endianness and sizes for cross-platform compatibility.
 | `message_timestamp` | `time_t` | UNIX timestamp of the message |
 | `message_body` | `char[MAX_BODY_LENGTH]` | Content of the message |
 
-#### 6.2.3 PayloadRplTeam
+### 6.2.3 PayloadRplTeam
 *Used with:* `RPL_TEAMS_LIST`, `RPL_SUBSCRIBED_LIST`
 
 | Field | Type | Description |
@@ -281,7 +281,7 @@ endianness and sizes for cross-platform compatibility.
 | `team_name` | `char[MAX_NAME_LENGTH]` | Name of the team |
 | `team_description` | `char[MAX_DESCRIPTION_LENGTH]` | Description of the team |
 
-#### 6.2.4 PayloadRplChannel
+### 6.2.4 PayloadRplChannel
 *Used with:* `RPL_CHANNELS_LIST`
 
 | Field | Type | Description |
@@ -290,7 +290,7 @@ endianness and sizes for cross-platform compatibility.
 | `channel_name` | `char[MAX_NAME_LENGTH]` | Name of the channel |
 | `channel_description` | `char[MAX_DESCRIPTION_LENGTH]` | Description of the channel |
 
-#### 6.2.5 PayloadRplThread
+### 6.2.5 PayloadRplThread
 *Used with:* `RPL_THREADS_LIST`
 
 | Field | Type | Description |
@@ -301,7 +301,7 @@ endianness and sizes for cross-platform compatibility.
 | `thread_title` | `char[MAX_NAME_LENGTH]` | Title of the thread |
 | `thread_body` | `char[MAX_BODY_LENGTH]` | Opening message body |
 
-#### 6.2.6 PayloadRplReply
+### 6.2.6 PayloadRplReply
 *Used with:* `RPL_REPLIES_LIST`
 
 | Field | Type | Description |
@@ -313,9 +313,9 @@ endianness and sizes for cross-platform compatibility.
 
 ---
 
-### 6.3 Server Event Payloads
+## 6.3 Server Event Payloads
 
-#### 6.3.1 PayloadEvtUserConnection
+### 6.3.1 PayloadEvtUserConnection
 *Used with:* `EVT_LOGGED_IN`, `EVT_LOGGED_OUT`
 
 | Field | Type | Description |
@@ -323,7 +323,7 @@ endianness and sizes for cross-platform compatibility.
 | `user_uuid` | `char[UUID_LENGTH]` | UUID of the connecting/disconnecting user |
 | `user_name` | `char[MAX_NAME_LENGTH]` | Name of the user |
 
-#### 6.3.2 PayloadEvtPrivateMsg
+### 6.3.2 PayloadEvtPrivateMsg
 *Used with:* `EVT_PRIVATE_MSG_RCVD`
 
 | Field | Type | Description |
@@ -331,7 +331,7 @@ endianness and sizes for cross-platform compatibility.
 | `sender_uuid` | `char[UUID_LENGTH]` | UUID of the message sender |
 | `message_body` | `char[MAX_BODY_LENGTH]` | Content of the private message |
 
-#### 6.3.3 PayloadEvtTeamCreated
+### 6.3.3 PayloadEvtTeamCreated
 *Used with:* `EVT_TEAM_CREATED`
 
 | Field | Type | Description |
@@ -340,7 +340,7 @@ endianness and sizes for cross-platform compatibility.
 | `team_name` | `char[MAX_NAME_LENGTH]` | Name of the team |
 | `team_description` | `char[MAX_DESCRIPTION_LENGTH]` | Description of the team |
 
-#### 6.3.4 PayloadEvtChannelCreated
+### 6.3.4 PayloadEvtChannelCreated
 *Used with:* `EVT_CHANNEL_CREATED`
 
 | Field | Type | Description |
@@ -349,7 +349,7 @@ endianness and sizes for cross-platform compatibility.
 | `channel_name` | `char[MAX_NAME_LENGTH]` | Name of the channel |
 | `channel_description` | `char[MAX_DESCRIPTION_LENGTH]` | Description of the channel |
 
-#### 6.3.5 PayloadEvtThreadCreated
+### 6.3.5 PayloadEvtThreadCreated
 *Used with:* `EVT_THREAD_CREATED`
 
 | Field | Type | Description |
@@ -360,7 +360,7 @@ endianness and sizes for cross-platform compatibility.
 | `thread_title` | `char[MAX_NAME_LENGTH]` | Title of the thread |
 | `thread_body` | `char[MAX_BODY_LENGTH]` | Opening message body |
 
-#### 6.3.6 PayloadEvtReplyCreated
+### 6.3.6 PayloadEvtReplyCreated
 *Used with:* `EVT_REPLY_CREATED`
 
 | Field | Type | Description |
@@ -372,9 +372,9 @@ endianness and sizes for cross-platform compatibility.
 
 ---
 
-### 6.4 Error Payloads
+## 6.4 Error Payloads
 
-#### 6.4.1 PayloadErrUnknown
+### 6.4.1 PayloadErrUnknown
 *Used with:* `ERR_NOT_FOUND` (when the unknown entity has a UUID)
 
 | Field | Type | Description |
@@ -383,7 +383,7 @@ endianness and sizes for cross-platform compatibility.
 
 ---
 
-## 7. Command/Response Reference
+# 7. Command/Response Reference
 
 This section summarizes the expected request payload and possible server
 responses for each command.
@@ -411,7 +411,7 @@ responses for each command.
 
 ---
 
-## 8. Constants and Limits
+# 8. Constants and Limits
 
 The following constants are defined in `limits.hpp` and govern all field
 sizes in this protocol. Implementations MUST use identical values on both
@@ -430,7 +430,7 @@ client and server.
 
 ---
 
-## 9. Security Considerations
+# 9. Security Considerations
 
 - MTCP does not include built-in encryption. It is RECOMMENDED to run MTCP
   over TLS to protect message confidentiality and integrity.
