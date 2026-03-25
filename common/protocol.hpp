@@ -6,7 +6,7 @@
 
 namespace myteams {
 
-    enum CommandID : uint16_t
+    enum CommandID : std::uint16_t
     {
         CMD_LOGIN           = 10,
         CMD_LOGOUT          = 11,
@@ -23,7 +23,7 @@ namespace myteams {
         CMD_INFO            = 80
     };
 
-    enum StatusCode : uint16_t
+    enum StatusCode : std::uint16_t
     {
         RPL_OK                  = 200,
         RPL_CREATED             = 201,
@@ -58,8 +58,8 @@ namespace myteams {
     struct __attribute__((packed))
     PacketHeader
     {
-        uint16_t code;
-        uint16_t payload_size;
+        std::uint16_t code;
+        std::uint16_t payload_size;
     };
 
 
