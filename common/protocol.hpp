@@ -134,7 +134,8 @@ namespace myteams {
     };
 
     //serv -> cli
-    struct __attribute__((packed)) PayloadRplMessage
+    struct __attribute__((packed))
+    PayloadRplMessage
     {
         char sender_uuid[UUID_LENGTH];
         time_t message_timestamp;
@@ -142,7 +143,8 @@ namespace myteams {
     };
 
     //serv -> cli
-    struct __attribute__((packed)) PayloadRplTeam
+    struct __attribute__((packed))
+    PayloadRplTeam
     {
         char team_uuid[UUID_LENGTH];
         char team_name[MAX_NAME_LENGTH];
