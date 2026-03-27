@@ -1,6 +1,10 @@
 #ifndef LIMITS_HPP
 #define LIMITS_HPP
 
+#ifdef _WIN32
+#pragma once
+#endif
+
 #include <cstdint>
 
 namespace myteams
