@@ -1,5 +1,5 @@
 #include "core/server_manager/server_manager.hpp"
-#include "core/server_manager/server_exceptions.hpp"
+#include "core/exceptions/server_exceptions.hpp"
 
 #include <charconv>
 #include <cstdint>
@@ -43,7 +43,7 @@ run(std::int32_t ac, char **av)
     try {
         ServerManager serverManager(port);
         serverManager.initializeTcpListener();
-        //poll
+        serverManager.runPollLoop();
     } catch (const ServerException &exception) {
         std::cerr << exception.what() << std::endl;
         return EXIT_FAILURE;

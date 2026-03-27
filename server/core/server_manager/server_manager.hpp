@@ -5,9 +5,12 @@
 #pragma once
 #endif
 
+#include <cstddef>
 #include <cstdint>
+#include <vector>
 
 extern "C" {
+    #include <poll.h>
     #include <sys/socket.h>
 }
 
@@ -24,6 +27,7 @@ class ServerManager {
 		ServerManager &operator=(ServerManager &&other) noexcept;
 
 		void initializeTcpListener(std::int32_t backlog = SOMAXCONN);
+		void runPollLoop();
 
 		std::int32_t getListenFd() const noexcept;
 		std::uint16_t getPort() const noexcept;
@@ -34,6 +38,8 @@ class ServerManager {
 		static void setReuseAddress(std::int32_t socketFd);
 		static std::uint32_t toNetworkAddress(std::uint32_t hostAddress);
 		static std::uint16_t toNetworkPort(std::uint16_t hostPort);
+		static std::int32_t pollSockets(std::vector<struct pollfd> &pollFds, std::int32_t timeoutMs);
+		static std::int32_t acceptClient(std::int32_t socketFd);
 		void bindSocket(std::int32_t socketFd) const;
 		static void listenSocket(std::int32_t socketFd, std::int32_t backlog);
 
