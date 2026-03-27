@@ -1,0 +1,561 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?rfc toc="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc compact="yes"?>
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude"
+     category="info"
+     docName="draft-myteams-mtcp-00"
+     ipr="none"
+     version="3">
+
+  <front>
+    <title abbrev="MTCP">MyTeams Binary Communication Protocol (MTCP) Specification v1.0</title>
+    <seriesInfo name="Internet-Draft" value="draft-myteams-mtcp-00"/>
+    <author fullname="MyTeams Project">
+      <organization>MyTeams Project</organization>
+    </author>
+    <date month="March" year="2025"/>
+    <abstract>
+      <t>This document specifies the MyTeams Communication Protocol (MTCP), a
+      binary, length-prefixed protocol used for communication between MyTeams
+      clients and servers. It defines the packet framing, command identifiers,
+      status/event codes, and all associated payload structures.</t>
+    </abstract>
+  </front>
+
+  <middle>
+
+    <section anchor="introduction" numbered="true">
+      <name>Introduction</name>
+      <t>MTCP is a compact binary protocol operating over a reliable, ordered
+      stream transport (e.g., TCP). All messages consist of a fixed-size header
+      followed by a variable-length payload. The protocol supports user
+      authentication, private messaging, team/channel/thread management, and
+      real-time event notification.</t>
+      <t>All structures use <tt>__attribute__((packed))</tt> to suppress compiler padding,
+      ensuring a consistent wire format across platforms and compilers.</t>
+    </section>
+
+    <section anchor="conventions" numbered="true">
+      <name>Conventions and Terminology</name>
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHOULD", "MAY" in this
+      document are to be interpreted as described in RFC 2119.</t>
+      <t><strong>Definitions:</strong></t>
+      <table>
+        <thead>
+          <tr><th>Term</th><th>Definition</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Client</td><td>An endpoint initiating commands to the server</td></tr>
+          <tr><td>Server</td><td>The central entity processing commands and dispatching replies/events</td></tr>
+          <tr><td>UUID</td><td>A fixed-length identifier of <tt>UUID_LENGTH</tt> bytes</td></tr>
+          <tr><td>Command</td><td>A message sent from client to server</td></tr>
+          <tr><td>Reply</td><td>A message sent from server to client in response to a command</td></tr>
+          <tr><td>Event</td><td>An unsolicited message sent from server to client</td></tr>
+        </tbody>
+      </table>
+      <t>All integer fields are <strong>unsigned 16-bit</strong> (<tt>uint16_t</tt>) in network byte
+      order unless otherwise noted. String fields are <strong>null-padded</strong> fixed-length
+      byte arrays.</t>
+    </section>
+
+    <section anchor="packet-framing" numbered="true">
+      <name>Packet Framing</name>
+      <t>Every MTCP message begins with a <strong>PacketHeader</strong>, immediately followed by
+      a payload of <tt>payload_size</tt> bytes.</t>
+
+      <section anchor="packetheader" numbered="true">
+        <name>PacketHeader</name>
+        <artwork><![CDATA[
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|             code              |          payload_size         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        ]]></artwork>
+        <table>
+          <thead>
+            <tr><th>Field</th><th>Type</th><th>Size</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><tt>code</tt></td><td><tt>uint16_t</tt></td><td>2 bytes</td><td>Command ID or Status Code</td></tr>
+            <tr><td><tt>payload_size</tt></td><td><tt>uint16_t</tt></td><td>2 bytes</td><td>Length of the following payload in bytes</td></tr>
+          </tbody>
+        </table>
+        <ul>
+          <li>The <tt>code</tt> field contains either a <strong>CommandID</strong> (client to server) or a
+          <strong>StatusCode</strong> (server to client).</li>
+          <li>A <tt>payload_size</tt> of <tt>0</tt> indicates a header-only packet (no payload follows).</li>
+          <li>Receivers MUST read exactly <tt>payload_size</tt> bytes after the header before
+          processing the next message.</li>
+        </ul>
+      </section>
+    </section>
+
+    <section anchor="command-codes" numbered="true">
+      <name>Command Codes (Client to Server)</name>
+      <t>Commands are sent by the client to request an action from the server.</t>
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Code</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><tt>CMD_LOGIN</tt></td><td><tt>10</tt></td><td>Authenticate with a username</td></tr>
+          <tr><td><tt>CMD_LOGOUT</tt></td><td><tt>11</tt></td><td>End the current session</td></tr>
+          <tr><td><tt>CMD_USERS</tt></td><td><tt>20</tt></td><td>List all known users</td></tr>
+          <tr><td><tt>CMD_USER_INFO</tt></td><td><tt>21</tt></td><td>Get information about a specific user</td></tr>
+          <tr><td><tt>CMD_SEND</tt></td><td><tt>30</tt></td><td>Send a private message to a user</td></tr>
+          <tr><td><tt>CMD_MESSAGES</tt></td><td><tt>31</tt></td><td>List messages with a specific user</td></tr>
+          <tr><td><tt>CMD_SUBSCRIBE</tt></td><td><tt>40</tt></td><td>Subscribe to a team</td></tr>
+          <tr><td><tt>CMD_UNSUBSCRIBE</tt></td><td><tt>41</tt></td><td>Unsubscribe from a team</td></tr>
+          <tr><td><tt>CMD_SUBSCRIBED_LIST</tt></td><td><tt>42</tt></td><td>List teams the current user is subscribed to</td></tr>
+          <tr><td><tt>CMD_USE</tt></td><td><tt>50</tt></td><td>Set the active team/channel/thread context</td></tr>
+          <tr><td><tt>CMD_CREATE</tt></td><td><tt>60</tt></td><td>Create a team, channel, thread, or reply</td></tr>
+          <tr><td><tt>CMD_LIST</tt></td><td><tt>70</tt></td><td>List teams, channels, or threads</td></tr>
+          <tr><td><tt>CMD_INFO</tt></td><td><tt>80</tt></td><td>Get info about the current context</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section anchor="status-codes" numbered="true">
+      <name>Status Codes (Server to Client)</name>
+      <t>Status codes are used in reply and event packets from the server.</t>
+
+      <section anchor="success-codes" numbered="true">
+        <name>Success Codes (2xx)</name>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Code</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><tt>RPL_OK</tt></td><td><tt>200</tt></td><td>Generic success</td></tr>
+            <tr><td><tt>RPL_CREATED</tt></td><td><tt>201</tt></td><td>Resource successfully created</td></tr>
+            <tr><td><tt>RPL_USERS_LIST</tt></td><td><tt>202</tt></td><td>Payload contains a user entry (repeated)</td></tr>
+            <tr><td><tt>RPL_USER_INFO</tt></td><td><tt>203</tt></td><td>Payload contains detailed user info</td></tr>
+            <tr><td><tt>RPL_MESSAGES_LIST</tt></td><td><tt>204</tt></td><td>Payload contains a message entry (repeated)</td></tr>
+            <tr><td><tt>RPL_TEAMS_LIST</tt></td><td><tt>205</tt></td><td>Payload contains a team entry (repeated)</td></tr>
+            <tr><td><tt>RPL_CHANNELS_LIST</tt></td><td><tt>206</tt></td><td>Payload contains a channel entry (repeated)</td></tr>
+            <tr><td><tt>RPL_THREADS_LIST</tt></td><td><tt>207</tt></td><td>Payload contains a thread entry (repeated)</td></tr>
+            <tr><td><tt>RPL_REPLIES_LIST</tt></td><td><tt>208</tt></td><td>Payload contains a reply entry (repeated)</td></tr>
+            <tr><td><tt>RPL_SUBSCRIBED_LIST</tt></td><td><tt>209</tt></td><td>Payload contains a subscribed team entry (repeated)</td></tr>
+          </tbody>
+        </table>
+        <aside>
+          <t><strong>Note on list replies:</strong> For commands returning multiple items, the
+          server MUST send one packet per item, all with the same status code,
+          followed by a final <tt>RPL_OK</tt> packet with <tt>payload_size = 0</tt> to signal
+          end of list.</t>
+        </aside>
+      </section>
+
+      <section anchor="error-codes" numbered="true">
+        <name>Error Codes (4xx / 5xx)</name>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Code</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><tt>ERR_BAD_REQUEST</tt></td><td><tt>400</tt></td><td>Malformed command or invalid parameters</td></tr>
+            <tr><td><tt>ERR_UNAUTHORIZED</tt></td><td><tt>401</tt></td><td>Action requires authentication</td></tr>
+            <tr><td><tt>ERR_FORBIDDEN</tt></td><td><tt>403</tt></td><td>Authenticated user lacks permission</td></tr>
+            <tr><td><tt>ERR_NOT_FOUND</tt></td><td><tt>404</tt></td><td>Referenced resource does not exist</td></tr>
+            <tr><td><tt>ERR_ALREADY_EXIST</tt></td><td><tt>409</tt></td><td>Resource already exists</td></tr>
+            <tr><td><tt>ERR_SERVER_INTERNAL</tt></td><td><tt>500</tt></td><td>Unexpected server-side error</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section anchor="event-codes" numbered="true">
+        <name>Event Codes (6xx)</name>
+        <t>Events are sent asynchronously by the server to notify connected clients.</t>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Code</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><tt>EVT_LOGGED_IN</tt></td><td><tt>600</tt></td><td>A user has connected</td></tr>
+            <tr><td><tt>EVT_LOGGED_OUT</tt></td><td><tt>601</tt></td><td>A user has disconnected</td></tr>
+            <tr><td><tt>EVT_PRIVATE_MSG_RCVD</tt></td><td><tt>602</tt></td><td>A private message was received</td></tr>
+            <tr><td><tt>EVT_TEAM_CREATED</tt></td><td><tt>603</tt></td><td>A new team was created</td></tr>
+            <tr><td><tt>EVT_CHANNEL_CREATED</tt></td><td><tt>604</tt></td><td>A new channel was created</td></tr>
+            <tr><td><tt>EVT_THREAD_CREATED</tt></td><td><tt>605</tt></td><td>A new thread was created</td></tr>
+            <tr><td><tt>EVT_REPLY_CREATED</tt></td><td><tt>606</tt></td><td>A new reply was posted</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </section>
+
+    <section anchor="payload-structures" numbered="true">
+      <name>Payload Structures</name>
+      <t>All structures are packed (no padding). String fields are <strong>null-padded</strong>
+      fixed-length arrays. Integer fields use the host platform's native
+      representation for <tt>int</tt> and <tt>std::uint64_t</tt> — implementations MUST use
+      big endian byte order.</t>
+
+      <section anchor="client-request-payloads" numbered="true">
+        <name>Client Request Payloads</name>
+
+        <section anchor="payloadreqlogin" numbered="true">
+          <name>PayloadReqLogin</name>
+          <t><em>Used with:</em> <tt>CMD_LOGIN</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>user_name</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>The username to log in as</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadreqtargetuser" numbered="true">
+          <name>PayloadReqTargetUser</name>
+          <t><em>Used with:</em> <tt>CMD_USER_INFO</tt>, <tt>CMD_SEND</tt>, <tt>CMD_MESSAGES</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>target_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the target user</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadreqsendmsg" numbered="true">
+          <name>PayloadReqSendMsg</name>
+          <t><em>Used with:</em> <tt>CMD_SEND</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>target_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the recipient</td></tr>
+              <tr><td><tt>message_body</tt></td><td><tt>char[MAX_BODY_LENGTH]</tt></td><td>Content of the private message</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadreqteamtarget" numbered="true">
+          <name>PayloadReqTeamTarget</name>
+          <t><em>Used with:</em> <tt>CMD_SUBSCRIBE</tt>, <tt>CMD_UNSUBSCRIBE</tt>, <tt>CMD_USE</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>team_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the target team</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadreqcreateteam" numbered="true">
+          <name>PayloadReqCreateTeam</name>
+          <t><em>Used with:</em> <tt>CMD_CREATE</tt> (team context)</t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>team_name</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>Name of the team to create</td></tr>
+              <tr><td><tt>team_description</tt></td><td><tt>char[MAX_DESCRIPTION_LENGTH]</tt></td><td>Description of the team</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadreqcreatechannel" numbered="true">
+          <name>PayloadReqCreateChannel</name>
+          <t><em>Used with:</em> <tt>CMD_CREATE</tt> (channel context)</t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>channel_name</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>Name of the channel to create</td></tr>
+              <tr><td><tt>channel_description</tt></td><td><tt>char[MAX_DESCRIPTION_LENGTH]</tt></td><td>Description of the channel</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadreqcreatethread" numbered="true">
+          <name>PayloadReqCreateThread</name>
+          <t><em>Used with:</em> <tt>CMD_CREATE</tt> (thread context)</t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>thread_title</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>Title of the thread</td></tr>
+              <tr><td><tt>thread_body</tt></td><td><tt>char[MAX_BODY_LENGTH]</tt></td><td>Body/content of the opening message</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadreqcreatereply" numbered="true">
+          <name>PayloadReqCreateReply</name>
+          <t><em>Used with:</em> <tt>CMD_CREATE</tt> (reply context)</t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>reply_body</tt></td><td><tt>char[MAX_BODY_LENGTH]</tt></td><td>Content of the reply</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+
+      <section anchor="server-reply-payloads" numbered="true">
+        <name>Server Reply Payloads</name>
+
+        <section anchor="payloadrpluser" numbered="true">
+          <name>PayloadRplUser</name>
+          <t><em>Used with:</em> <tt>RPL_USERS_LIST</tt>, <tt>RPL_USER_INFO</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>user_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>Unique identifier of the user</td></tr>
+              <tr><td><tt>user_name</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>Display name of the user</td></tr>
+              <tr><td><tt>user_status</tt></td><td><tt>uint32_t</tt></td><td>Connection status (0 = offline, non-zero = online)</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadrplmessage" numbered="true">
+          <name>PayloadRplMessage</name>
+          <t><em>Used with:</em> <tt>RPL_MESSAGES_LIST</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>sender_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the message sender</td></tr>
+              <tr><td><tt>message_timestamp</tt></td><td><tt>std::uint64_t</tt></td><td>UNIX timestamp of the message</td></tr>
+              <tr><td><tt>message_body</tt></td><td><tt>char[MAX_BODY_LENGTH]</tt></td><td>Content of the message</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadrplteam" numbered="true">
+          <name>PayloadRplTeam</name>
+          <t><em>Used with:</em> <tt>RPL_TEAMS_LIST</tt>, <tt>RPL_SUBSCRIBED_LIST</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>team_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>Unique identifier of the team</td></tr>
+              <tr><td><tt>team_name</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>Name of the team</td></tr>
+              <tr><td><tt>team_description</tt></td><td><tt>char[MAX_DESCRIPTION_LENGTH]</tt></td><td>Description of the team</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadrplchannel" numbered="true">
+          <name>PayloadRplChannel</name>
+          <t><em>Used with:</em> <tt>RPL_CHANNELS_LIST</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>channel_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>Unique identifier of the channel</td></tr>
+              <tr><td><tt>channel_name</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>Name of the channel</td></tr>
+              <tr><td><tt>channel_description</tt></td><td><tt>char[MAX_DESCRIPTION_LENGTH]</tt></td><td>Description of the channel</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadrplthread" numbered="true">
+          <name>PayloadRplThread</name>
+          <t><em>Used with:</em> <tt>RPL_THREADS_LIST</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>thread_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>Unique identifier of the thread</td></tr>
+              <tr><td><tt>user_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the thread author</td></tr>
+              <tr><td><tt>thread_timestamp</tt></td><td><tt>std::uint64_t</tt></td><td>UNIX timestamp of thread creation</td></tr>
+              <tr><td><tt>thread_title</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>Title of the thread</td></tr>
+              <tr><td><tt>thread_body</tt></td><td><tt>char[MAX_BODY_LENGTH]</tt></td><td>Opening message body</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadrplreply" numbered="true">
+          <name>PayloadRplReply</name>
+          <t><em>Used with:</em> <tt>RPL_REPLIES_LIST</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>thread_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the parent thread</td></tr>
+              <tr><td><tt>user_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the reply author</td></tr>
+              <tr><td><tt>reply_timestamp</tt></td><td><tt>std::uint64_t</tt></td><td>UNIX timestamp of the reply</td></tr>
+              <tr><td><tt>reply_body</tt></td><td><tt>char[MAX_BODY_LENGTH]</tt></td><td>Content of the reply</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+
+      <section anchor="server-event-payloads" numbered="true">
+        <name>Server Event Payloads</name>
+
+        <section anchor="payloadevtuserconnection" numbered="true">
+          <name>PayloadEvtUserConnection</name>
+          <t><em>Used with:</em> <tt>EVT_LOGGED_IN</tt>, <tt>EVT_LOGGED_OUT</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>user_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the connecting/disconnecting user</td></tr>
+              <tr><td><tt>user_name</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>Name of the user</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadevtprivatemsg" numbered="true">
+          <name>PayloadEvtPrivateMsg</name>
+          <t><em>Used with:</em> <tt>EVT_PRIVATE_MSG_RCVD</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>sender_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the message sender</td></tr>
+              <tr><td><tt>message_body</tt></td><td><tt>char[MAX_BODY_LENGTH]</tt></td><td>Content of the private message</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadevtteamcreated" numbered="true">
+          <name>PayloadEvtTeamCreated</name>
+          <t><em>Used with:</em> <tt>EVT_TEAM_CREATED</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>team_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the newly created team</td></tr>
+              <tr><td><tt>team_name</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>Name of the team</td></tr>
+              <tr><td><tt>team_description</tt></td><td><tt>char[MAX_DESCRIPTION_LENGTH]</tt></td><td>Description of the team</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadevtchannelcreated" numbered="true">
+          <name>PayloadEvtChannelCreated</name>
+          <t><em>Used with:</em> <tt>EVT_CHANNEL_CREATED</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>channel_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the newly created channel</td></tr>
+              <tr><td><tt>channel_name</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>Name of the channel</td></tr>
+              <tr><td><tt>channel_description</tt></td><td><tt>char[MAX_DESCRIPTION_LENGTH]</tt></td><td>Description of the channel</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadevtthreadcreated" numbered="true">
+          <name>PayloadEvtThreadCreated</name>
+          <t><em>Used with:</em> <tt>EVT_THREAD_CREATED</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>thread_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the new thread</td></tr>
+              <tr><td><tt>user_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the thread author</td></tr>
+              <tr><td><tt>thread_timestamp</tt></td><td><tt>std::uint64_t</tt></td><td>UNIX timestamp of creation</td></tr>
+              <tr><td><tt>thread_title</tt></td><td><tt>char[MAX_NAME_LENGTH]</tt></td><td>Title of the thread</td></tr>
+              <tr><td><tt>thread_body</tt></td><td><tt>char[MAX_BODY_LENGTH]</tt></td><td>Opening message body</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section anchor="payloadevtreplycreated" numbered="true">
+          <name>PayloadEvtReplyCreated</name>
+          <t><em>Used with:</em> <tt>EVT_REPLY_CREATED</tt></t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>team_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the team containing the thread</td></tr>
+              <tr><td><tt>thread_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the parent thread</td></tr>
+              <tr><td><tt>user_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the reply author</td></tr>
+              <tr><td><tt>reply_body</tt></td><td><tt>char[MAX_BODY_LENGTH]</tt></td><td>Content of the reply</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+
+      <section anchor="error-payloads" numbered="true">
+        <name>Error Payloads</name>
+
+        <section anchor="payloaderrunknown" numbered="true">
+          <name>PayloadErrUnknown</name>
+          <t><em>Used with:</em> <tt>ERR_NOT_FOUND</tt> (when the unknown entity has a UUID)</t>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><tt>unknown_uuid</tt></td><td><tt>char[UUID_LENGTH]</tt></td><td>UUID of the resource that was not found</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+    </section>
+
+    <section anchor="command-response-reference" numbered="true">
+      <name>Command/Response Reference</name>
+      <t>This section summarizes the expected request payload and possible server
+      responses for each command.</t>
+      <table>
+        <thead>
+          <tr><th>Command</th><th>Request Payload</th><th>Success Response(s)</th><th>Error Response(s)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><tt>CMD_LOGIN</tt></td><td><tt>PayloadReqLogin</tt></td><td><tt>RPL_OK</tt></td><td><tt>ERR_ALREADY_EXIST</tt>, <tt>ERR_BAD_REQUEST</tt></td></tr>
+          <tr><td><tt>CMD_LOGOUT</tt></td><td><em>(none)</em></td><td><tt>RPL_OK</tt></td><td><tt>ERR_UNAUTHORIZED</tt></td></tr>
+          <tr><td><tt>CMD_USERS</tt></td><td><em>(none)</em></td><td><tt>RPL_USERS_LIST</tt> x N, <tt>RPL_OK</tt></td><td><tt>ERR_UNAUTHORIZED</tt></td></tr>
+          <tr><td><tt>CMD_USER_INFO</tt></td><td><tt>PayloadReqTargetUser</tt></td><td><tt>RPL_USER_INFO</tt></td><td><tt>ERR_NOT_FOUND</tt>, <tt>ERR_UNAUTHORIZED</tt></td></tr>
+          <tr><td><tt>CMD_SEND</tt></td><td><tt>PayloadReqSendMsg</tt></td><td><tt>RPL_OK</tt></td><td><tt>ERR_NOT_FOUND</tt>, <tt>ERR_UNAUTHORIZED</tt></td></tr>
+          <tr><td><tt>CMD_MESSAGES</tt></td><td><tt>PayloadReqTargetUser</tt></td><td><tt>RPL_MESSAGES_LIST</tt> x N, <tt>RPL_OK</tt></td><td><tt>ERR_NOT_FOUND</tt>, <tt>ERR_UNAUTHORIZED</tt></td></tr>
+          <tr><td><tt>CMD_SUBSCRIBE</tt></td><td><tt>PayloadReqTeamTarget</tt></td><td><tt>RPL_OK</tt></td><td><tt>ERR_NOT_FOUND</tt>, <tt>ERR_ALREADY_EXIST</tt></td></tr>
+          <tr><td><tt>CMD_UNSUBSCRIBE</tt></td><td><tt>PayloadReqTeamTarget</tt></td><td><tt>RPL_OK</tt></td><td><tt>ERR_NOT_FOUND</tt>, <tt>ERR_FORBIDDEN</tt></td></tr>
+          <tr><td><tt>CMD_SUBSCRIBED_LIST</tt></td><td><em>(none)</em></td><td><tt>RPL_SUBSCRIBED_LIST</tt> x N, <tt>RPL_OK</tt></td><td><tt>ERR_UNAUTHORIZED</tt></td></tr>
+          <tr><td><tt>CMD_USE</tt></td><td><tt>PayloadReqTeamTarget</tt></td><td><tt>RPL_OK</tt></td><td><tt>ERR_NOT_FOUND</tt>, <tt>ERR_FORBIDDEN</tt></td></tr>
+          <tr><td><tt>CMD_CREATE</tt> (team)</td><td><tt>PayloadReqCreateTeam</tt></td><td><tt>RPL_CREATED</tt> + <tt>EVT_TEAM_CREATED</tt> to all</td><td><tt>ERR_ALREADY_EXIST</tt></td></tr>
+          <tr><td><tt>CMD_CREATE</tt> (channel)</td><td><tt>PayloadReqCreateChannel</tt></td><td><tt>RPL_CREATED</tt> + <tt>EVT_CHANNEL_CREATED</tt> to subscribers</td><td><tt>ERR_ALREADY_EXIST</tt>, <tt>ERR_FORBIDDEN</tt></td></tr>
+          <tr><td><tt>CMD_CREATE</tt> (thread)</td><td><tt>PayloadReqCreateThread</tt></td><td><tt>RPL_CREATED</tt> + <tt>EVT_THREAD_CREATED</tt> to subscribers</td><td><tt>ERR_FORBIDDEN</tt></td></tr>
+          <tr><td><tt>CMD_CREATE</tt> (reply)</td><td><tt>PayloadReqCreateReply</tt></td><td><tt>RPL_CREATED</tt> + <tt>EVT_REPLY_CREATED</tt> to subscribers</td><td><tt>ERR_FORBIDDEN</tt></td></tr>
+          <tr><td><tt>CMD_LIST</tt> (teams)</td><td><em>(none)</em></td><td><tt>RPL_TEAMS_LIST</tt> x N, <tt>RPL_OK</tt></td><td><tt>ERR_UNAUTHORIZED</tt></td></tr>
+          <tr><td><tt>CMD_LIST</tt> (channels)</td><td><em>(none)</em></td><td><tt>RPL_CHANNELS_LIST</tt> x N, <tt>RPL_OK</tt></td><td><tt>ERR_FORBIDDEN</tt></td></tr>
+          <tr><td><tt>CMD_LIST</tt> (threads)</td><td><em>(none)</em></td><td><tt>RPL_THREADS_LIST</tt> x N, <tt>RPL_OK</tt></td><td><tt>ERR_FORBIDDEN</tt></td></tr>
+          <tr><td><tt>CMD_INFO</tt></td><td><em>(none)</em></td><td>Context-dependent reply</td><td><tt>ERR_BAD_REQUEST</tt></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section anchor="constants-and-limits" numbered="true">
+      <name>Constants and Limits</name>
+      <t>The following constants are defined in <tt>limits.hpp</tt> and govern all field
+      sizes in this protocol. Implementations MUST use identical values on both
+      client and server.</t>
+      <table>
+        <thead>
+          <tr><th>Constant</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><tt>UUID_LENGTH</tt></td><td>Fixed byte length of all UUID strings</td></tr>
+          <tr><td><tt>MAX_NAME_LENGTH</tt></td><td>Maximum length of name fields (teams, channels, users)</td></tr>
+          <tr><td><tt>MAX_DESCRIPTION_LENGTH</tt></td><td>Maximum length of description fields</td></tr>
+          <tr><td><tt>MAX_BODY_LENGTH</tt></td><td>Maximum length of message/thread/reply body fields</td></tr>
+        </tbody>
+      </table>
+      <t>The exact numeric values of these constants are defined in <tt>limits.hpp</tt>
+      and are not specified here to allow future revision without updating
+      this document.</t>
+    </section>
+
+    <section anchor="security-considerations" numbered="true">
+      <name>Security Considerations</name>
+      <ul>
+        <li>MTCP does not include built-in encryption. It is RECOMMENDED to run MTCP
+        over TLS to protect message confidentiality and integrity.</li>
+        <li>Authentication (<tt>CMD_LOGIN</tt>) relies solely on a username with no
+        password or challenge-response mechanism. Deployments SHOULD add
+        authentication at the transport layer.</li>
+        <li>The server MUST validate <tt>payload_size</tt> before reading payload bytes to
+        prevent buffer overflows.</li>
+        <li>Fixed-length string fields MUST be null-terminated within the buffer;
+        receivers MUST NOT assume null-termination beyond <tt>payload_size</tt>.</li>
+      </ul>
+    </section>
+
+  </middle>
+
+  <back>
+    <references>
+      <name>References</name>
+      <references>
+        <name>Normative References</name>
+        <reference anchor="RFC2119">
+          <front>
+            <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+            <author initials="S." surname="Bradner" fullname="S. Bradner"/>
+            <date year="1997" month="March"/>
+          </front>
+          <seriesInfo name="RFC" value="2119"/>
+        </reference>
+      </references>
+    </references>
+  </back>
+
+</rfc>
