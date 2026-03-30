@@ -1,7 +1,12 @@
 #ifndef PROTOCOL_HPP
 #define PROTOCOL_HPP
 
+#ifdef _WIN32
+#pragma once
+#endif
+
 #include "limits.hpp"
+#include <cstdint>
 
 namespace myteams {
 

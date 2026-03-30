@@ -23,22 +23,22 @@ namespace myteams
             copy_buffer(description_, description);
         }
 
-        [[nodiscard]] const char *getUuid() const noexcept
+        const char *getUuid() const noexcept
         {
             return uuid_;
         }
 
-        [[nodiscard]] const char *getName() const noexcept
+        const char *getName() const noexcept
         {
             return name_;
         }
 
-        [[nodiscard]] const char *getDescription() const noexcept
+        const char *getDescription() const noexcept
         {
             return description_;
         }
 
-        [[nodiscard]] const std::vector<Thread> &getThreads() const noexcept
+        const std::vector<Thread> &getThreads() const noexcept
         {
             return threads_;
         }

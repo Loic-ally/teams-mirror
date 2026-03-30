@@ -21,17 +21,17 @@ namespace myteams
             copy_buffer(name_, name);
         }
 
-        [[nodiscard]] const char *getUuid() const noexcept
+        const char *getUuid() const noexcept
         {
             return uuid_;
         }
 
-        [[nodiscard]] const char *getName() const noexcept
+        const char *getName() const noexcept
         {
             return name_;
         }
 
-        [[nodiscard]] bool isLoggedIn() const noexcept
+        bool isLoggedIn() const noexcept
         {
             return is_logged_in_;
         }
