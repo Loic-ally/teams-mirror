@@ -27,22 +27,22 @@ namespace myteams
             copy_buffer(body_, body);
         }
 
-        [[nodiscard]] const char *getUuid() const noexcept
+        const char *getUuid() const noexcept
         {
             return uuid_;
         }
 
-        [[nodiscard]] const char *getAuthorUuid() const noexcept
+        const char *getAuthorUuid() const noexcept
         {
             return author_uuid_;
         }
 
-        [[nodiscard]] std::time_t getCreatedAt() const noexcept
+        std::time_t getCreatedAt() const noexcept
         {
             return created_at_;
         }
 
-        [[nodiscard]] const char *getBody() const noexcept
+        const char *getBody() const noexcept
         {
             return body_;
         }
