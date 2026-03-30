@@ -68,6 +68,46 @@ class SocketListenException : public ServerSyscallException {
         }
 };
 
+class SocketPollException : public ServerSyscallException {
+    public:
+        explicit SocketPollException(int errorNumber)
+            : ServerSyscallException("poll() failed", errorNumber)
+        {
+        }
+};
+
+class SocketAcceptException : public ServerSyscallException {
+    public:
+        explicit SocketAcceptException(int errorNumber)
+            : ServerSyscallException("accept() failed", errorNumber)
+        {
+        }
+};
+
+class SocketReceiveException : public ServerSyscallException {
+    public:
+        explicit SocketReceiveException(int errorNumber)
+            : ServerSyscallException("recv() failed", errorNumber)
+        {
+        }
+};
+
+class SocketSendException : public ServerSyscallException {
+    public:
+        explicit SocketSendException(int errorNumber)
+            : ServerSyscallException("send() failed", errorNumber)
+        {
+        }
+};
+
+class SocketNotInitializedException : public ServerSocketException {
+    public:
+        SocketNotInitializedException()
+            : ServerSocketException("listening socket is not initialized")
+        {
+        }
+};
+
 class SocketAlreadyInitializedException : public ServerSocketException {
     public:
         SocketAlreadyInitializedException()

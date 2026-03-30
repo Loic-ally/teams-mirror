@@ -1,5 +1,5 @@
 #include "core/server_manager/server_manager.hpp"
-#include "core/server_manager/server_exceptions.hpp"
+#include "core/exceptions/server_exceptions.hpp"
 
 #include <charconv>
 #include <cstdint>
@@ -35,6 +35,10 @@ parsePort(const char *arg, std::uint16_t &outPort)
 std::int32_t
 run(std::int32_t ac, char **av)
 {
+    if (ac == 2 && std::string_view(av[1]) == "--help") {
+        std::cout << USAGE << std::endl;
+        return EXIT_SUCCESS;
+    }
     std::uint16_t port = 0;
     if (ac != 2 || !parsePort(av[1], port)) {
         std::cout << USAGE << std::endl;
@@ -43,7 +47,7 @@ run(std::int32_t ac, char **av)
     try {
         ServerManager serverManager(port);
         serverManager.initializeTcpListener();
-        //poll
+        serverManager.runPollLoop();
     } catch (const ServerException &exception) {
         std::cerr << exception.what() << std::endl;
         return EXIT_FAILURE;

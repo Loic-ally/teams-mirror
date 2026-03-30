@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ##
 ## EPITECH PROJECT, 2026
 ## My Teams
@@ -23,3 +24,5 @@ fclean:
 	find . -type f -name "*.gcov" -delete
 
 re: fclean all
+=======
+>>>>>>> 7596ad49b0903d1907caf7e152e46bddb56307a8
