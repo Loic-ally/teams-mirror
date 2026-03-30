@@ -6,6 +6,7 @@
 #endif
 
 #include "limits.hpp"
+#include <cstdint>
 
 namespace myteams {
 
