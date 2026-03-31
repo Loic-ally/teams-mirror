@@ -1,10 +1,14 @@
 #include "server_manager.hpp"
 #include "exceptions/server_exceptions.hpp"
 #include "core/client_manager/client_manager.hpp"
+#include "database/load/load.hpp"
+#include "database/save/save.hpp"
 #include "network/reciever/reciever.hpp"
 #include "network/sender/sender.hpp"
 
+#include <csignal>
 #include <cerrno>
+#include <iostream>
 #include <vector>
 
 extern "C" {
@@ -16,6 +20,8 @@ extern "C" {
 }
 
 namespace server {
+
+std::atomic<bool> ServerManager::_isRunning {true};
 
 ServerManager::ServerManager(std::uint16_t port)
 	: _listenFd(-1), _port(port)
@@ -89,10 +95,27 @@ ServerManager::pollSockets(std::vector<struct pollfd> &pollFds, std::int32_t tim
 	std::int32_t pollResult = -1;
 	do {
 		pollResult = ::poll(pollFds.data(), static_cast<nfds_t>(pollFds.size()), timeoutMs);
-	} while (pollResult < 0 && errno == EINTR);
-	if (pollResult < 0)
+	} while (pollResult < 0 && errno == EINTR && _isRunning.load());
+	if (pollResult < 0) {
+		if (errno == EINTR && !_isRunning.load())
+			return 0;
 		throw SocketPollException(errno);
+	}
 	return pollResult;
+}
+
+void
+ServerManager::handleSignal(std::int32_t signal) noexcept
+{
+	if (signal == SIGINT)
+		_isRunning.store(false);
+}
+
+void
+ServerManager::installSignalHandler()
+{
+	if (std::signal(SIGINT, &ServerManager::handleSignal) == SIG_ERR)
+		throw ServerException("signal(SIGINT) registration failed");
 }
 
 std::int32_t
@@ -147,15 +170,21 @@ ServerManager::runPollLoop()
 {
 	if (_listenFd < 0)
 		throw SocketNotInitializedException();
+	database::DatabaseLoader databaseLoader;
+	(void)databaseLoader.load(_users, _teams);
+	installSignalHandler();
+	_isRunning.store(true);
+
 	std::vector<struct pollfd> pollFds;
 	ClientManager clientManager;
-	bool running = true;
 	struct pollfd listenPollFd {};
 	listenPollFd.fd = _listenFd;
 	listenPollFd.events = POLLIN;
 	pollFds.push_back(listenPollFd);
-	while (running) {
+	while (_isRunning.load()) {
 		(void)pollSockets(pollFds, -1);
+		if (!_isRunning.load())
+			break;
 		for (std::size_t index = 0; index < pollFds.size();) {
 			const std::int32_t currentFd = pollFds[index].fd;
 			const short currentEvents = pollFds[index].revents;
@@ -215,6 +244,13 @@ ServerManager::runPollLoop()
 			pollFds.erase(pollFds.begin() + static_cast<std::vector<struct pollfd>::difference_type>(index));
 		}
 	}
+
+	for (std::size_t index = 1; index < pollFds.size(); ++index)
+		closeSocket(pollFds[index].fd);
+
+	database::DatabaseSaver databaseSaver;
+	if (!databaseSaver.save(_users, _teams))
+		std::cerr << "Server state could not be fully saved." << std::endl;
 }
 
 std::int32_t

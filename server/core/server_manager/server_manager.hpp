@@ -7,7 +7,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <atomic>
 #include <vector>
+
+#include "server/models/team/team.hpp"
+#include "server/models/user/user.hpp"
 
 extern "C" {
     #include <poll.h>
@@ -33,6 +37,9 @@ class ServerManager {
 		std::uint16_t getPort() const noexcept;
 
 	private:
+		static void handleSignal(std::int32_t signal) noexcept;
+		static void installSignalHandler();
+
 		static void closeSocket(std::int32_t &fd) noexcept;
 		static std::int32_t createTcpSocket();
 		static void setReuseAddress(std::int32_t socketFd);
@@ -45,6 +52,10 @@ class ServerManager {
 
 		std::int32_t _listenFd;
 		std::uint16_t _port;
+		std::vector<myteams::User> _users;
+		std::vector<myteams::Team> _teams;
+
+		static std::atomic<bool> _isRunning;
 };
 
 } // namespace server
