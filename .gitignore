@@ -7,3 +7,4 @@ main_test.c
 tmp
 .idea/
 build/
+server_data/
