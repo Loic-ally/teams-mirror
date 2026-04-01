@@ -2,72 +2,86 @@
 #include "Socket.hpp"
 #include "System.hpp"
 #include <arpa/inet.h>
-#include <cstring>
-#include <iostream>
+#include <cerrno>
 #include <netinet/in.h>
 #include <string>
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 namespace utils {
+
+SocketException::SocketException(const std::string &message, int errorNumber) noexcept
+    : std::runtime_error(message), _errorNumber(errorNumber) {
+}
+
+int SocketException::errorNumber() const noexcept {
+    return _errorNumber;
+}
 
 Socket::Socket(int domain, int type, int protocol)
     : _fd(socket(domain, type, protocol)) {
     if (_fd == -1) {
-        std::cout << std::strerror(errno) << std::endl;
-        throw std::runtime_error("Socket didn't create");
+        throw SocketException("socket() failed", errno);
     }
 }
 
 Socket::Socket(int fd) {
     if (fd < 0) {
-        throw std::runtime_error("Socket is invalid");
+        throw SocketException("socket fd is invalid", EBADF);
     }
     struct stat statbuf{};
     if (fstat(fd, &statbuf) == -1) {
-        std::cout << std::strerror(errno) << std::endl;
-        throw std::runtime_error("Socket is invalid");
+        throw SocketException("fstat() failed for socket fd", errno);
     }
     if (!S_ISSOCK(statbuf.st_mode)) {
-        throw std::runtime_error("Socket is invalid");
+        throw SocketException("fd is not a socket", ENOTSOCK);
     }
     _fd = dup(fd);
     if (_fd == -1) {
-        std::cout << std::strerror(errno) << std::endl;
-        throw std::runtime_error("Socket didn't create");
+        throw SocketException("dup() failed for socket fd", errno);
     }
 }
 
 Socket::~Socket() {
-    close(_fd);
+    if (_fd >= 0) {
+        (void)::close(_fd);
+    }
+}
+
+void Socket::setReuseAddress() const {
+    const int reuseAddr = 1;
+    if (::setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &reuseAddr, sizeof(reuseAddr)) == -1) {
+        throw SocketException("setsockopt(SO_REUSEADDR) failed", errno);
+    }
 }
 
 void Socket::bind(const sockaddr &addr) const {
     if (::bind(_fd, &addr, sizeof(addr)) == -1) {
-        std::cout << std::strerror(errno) << std::endl;
-        throw std::runtime_error("Bind didn't work");
+        throw SocketException("bind() failed", errno);
     }
 }
 
 void Socket::connect(const sockaddr &addr) const {
-    if (::connect(_fd, &addr, sizeof(addr)) == 1) {
-        std::cout << std::strerror(errno) << std::endl;
-        throw std::runtime_error("connect didn't work");
+    if (::connect(_fd, &addr, sizeof(addr)) == -1) {
+        throw SocketException("connect() failed", errno);
     };
 }
 
 void Socket::connect(const std::string &adress, int port) const {
     unsigned int addr;
     System::inet_pton(AF_INET, adress.data(), addr);
-    auto config = sockaddr_in{AF_INET, htons(port), in_addr{addr}, {}};
+    sockaddr_in config{};
+    config.sin_family = AF_INET;
+    config.sin_port = htons(port);
+    config.sin_addr = in_addr{addr};
     connect(*reinterpret_cast<sockaddr *>(&config));
 }
 
 void Socket::listen(int backlog) const {
     if (::listen(_fd, backlog) == -1) {
-        std::cout << std::strerror(errno) << std::endl;
-        throw std::runtime_error("Listen didn't work");
+        throw SocketException("listen() failed", errno);
     }
 }
 
@@ -80,16 +94,37 @@ Socket::accept() const {
     fd = ::accept(_fd, reinterpret_cast<struct sockaddr *>(&addr), &sockLen);
 
     if (fd == -1) {
-        std::cout << std::strerror(errno) << std::endl;
-        throw std::runtime_error("Accept didn't work");
+        throw SocketException("accept() failed", errno);
     }
 
     auto res1 = std::make_unique<Socket>(fd);
     auto res2 = std::make_unique<struct sockaddr>(
         *reinterpret_cast<struct sockaddr *>(&addr));
 
-    close(fd);
+    (void)::close(fd);
     return {std::move(res1), std::move(res2)};
+}
+
+std::int64_t Socket::send(const void *buffer, std::size_t size) const {
+    ssize_t sendResult = -1;
+    do {
+        sendResult = ::send(_fd, buffer, size, 0);
+    } while (sendResult < 0 && errno == EINTR);
+    if (sendResult < 0) {
+        throw SocketException("send() failed", errno);
+    }
+    return static_cast<std::int64_t>(sendResult);
+}
+
+std::int64_t Socket::recv(void *buffer, std::size_t size) const {
+    ssize_t recvResult = -1;
+    do {
+        recvResult = ::recv(_fd, buffer, size, 0);
+    } while (recvResult < 0 && errno == EINTR);
+    if (recvResult < 0) {
+        throw SocketException("recv() failed", errno);
+    }
+    return static_cast<std::int64_t>(recvResult);
 }
 
 std::int8_t Socket::poll(std::int8_t events, std::size_t timeout) const {
@@ -99,8 +134,7 @@ std::int8_t Socket::poll(std::int8_t events, std::size_t timeout) const {
         0,
     };
     if (::poll(&config, 1, timeout) == -1) {
-        std::cout << std::strerror(errno) << std::endl;
-        throw std::runtime_error("Poll didn't work");
+        throw SocketException("poll() failed", errno);
     }
     return config.revents;
 }
@@ -139,8 +173,11 @@ int Socket::getFd() const {
     return _fd;
 }
 
+SocketClosed::SocketClosed() noexcept : _message("socket closed unexpectedly") {
+}
+
 const char *SocketClosed::what() const noexcept {
-    return "Socket closed unexceptly";
+    return _message;
 }
 
 }

@@ -1,21 +1,22 @@
 #pragma once
 
-#include <exception>
+#include <stdexcept>
 #include <string>
 #include <sys/socket.h>
 
 namespace utils {
 class System {
   public:
-    class SystemException : std::exception {
-        const std::string _err;
-
+    class SystemException : public std::runtime_error {
       public:
-        SystemException(const std::string &str);
-        const char *what() const noexcept override;
+        SystemException(const std::string &operation, int errorNumber = 0);
+        int errorNumber() const noexcept;
+
+      private:
+        int _errorNumber;
     };
 
-    static std::size_t write(int fd, const std::string str);
+    static std::size_t write(int fd, const std::string &str);
     static std::string read(int fd, std::size_t size);
     static void getsockname(int fd, sockaddr &addr);
     static int fork();
