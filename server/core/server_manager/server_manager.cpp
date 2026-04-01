@@ -2,12 +2,16 @@
 #include "common/utils/Socket.hpp"
 #include "exceptions/server_exceptions.hpp"
 #include "core/client_manager/client_manager.hpp"
+#include "database/load/load.hpp"
+#include "database/save/save.hpp"
 #include "network/reciever/reciever.hpp"
 #include "network/sender/sender.hpp"
 
+#include <csignal>
 #include <cerrno>
 #include <memory>
 #include <unordered_map>
+#include <iostream>
 #include <vector>
 
 extern "C" {
@@ -100,6 +104,8 @@ removeClientAt(PollFdList &pollFds, std::size_t index, ClientSocketMap &clientSo
 
 } // namespace
 
+std::atomic<bool> ServerManager::_isRunning {true};
+
 ServerManager::ServerManager(std::uint16_t port)
 	: _listenSocket(nullptr), _port(port)
 {
@@ -128,10 +134,27 @@ ServerManager::pollSockets(std::vector<struct pollfd> &pollFds, std::int32_t tim
 	std::int32_t pollResult = -1;
 	do {
 		pollResult = ::poll(pollFds.data(), static_cast<nfds_t>(pollFds.size()), timeoutMs);
-	} while (pollResult < 0 && errno == EINTR);
-	if (pollResult < 0)
+	} while (pollResult < 0 && errno == EINTR && _isRunning.load());
+	if (pollResult < 0) {
+		if (errno == EINTR && !_isRunning.load())
+			return 0;
 		throw SocketPollException(errno);
+	}
 	return pollResult;
+}
+
+void
+ServerManager::handleSignal(std::int32_t signal) noexcept
+{
+	if (signal == SIGINT)
+		_isRunning.store(false);
+}
+
+void
+ServerManager::installSignalHandler()
+{
+	if (std::signal(SIGINT, &ServerManager::handleSignal) == SIG_ERR)
+		throw ServerException("signal(SIGINT) registration failed");
 }
 
 void
@@ -145,30 +168,25 @@ ServerManager::initializeTcpListener(std::int32_t backlog)
 	} catch (const utils::SocketException &exception) {
 		throw SocketCreationException(exception.errorNumber());
 	}
-
 	try {
 		listenSocket->setReuseAddress();
 	} catch (const utils::SocketException &exception) {
 		throw SocketOptionException(exception.errorNumber());
 	}
-
 	sockaddr_in serverAddr {};
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	serverAddr.sin_port = htons(_port);
-
 	try {
 		listenSocket->bind(*reinterpret_cast<const sockaddr *>(&serverAddr));
 	} catch (const utils::SocketException &exception) {
 		throw SocketBindException(exception.errorNumber());
 	}
-
 	try {
 		listenSocket->listen(backlog);
 	} catch (const utils::SocketException &exception) {
 		throw SocketListenException(exception.errorNumber());
 	}
-
 	_listenSocket = std::move(listenSocket);
 }
 
@@ -177,17 +195,22 @@ ServerManager::runPollLoop()
 {
 	if (_listenSocket == nullptr)
 		throw SocketNotInitializedException();
+	database::DatabaseLoader databaseLoader;
+	(void)databaseLoader.load(_users, _teams);
+	installSignalHandler();
+	_isRunning.store(true);
 	PollFdList pollFds;
 	ClientSocketMap clientSockets;
 	ClientManager clientManager;
-	bool running = true;
 	const std::int32_t listenFd = _listenSocket->getFd();
 	struct pollfd listenPollFd {};
 	listenPollFd.fd = listenFd;
 	listenPollFd.events = POLLIN;
 	pollFds.push_back(listenPollFd);
-	while (running) {
+	while (_isRunning.load()) {
 		(void)pollSockets(pollFds, -1);
+		if (!_isRunning.load())
+			break;
 		for (std::size_t index = 0; index < pollFds.size();) {
 			struct pollfd &currentPollFd = pollFds[index];
 			const std::int32_t currentFd = currentPollFd.fd;
@@ -216,6 +239,10 @@ ServerManager::runPollLoop()
 			removeClientAt(pollFds, index, clientSockets, clientManager);
 		}
 	}
+	clientSockets.clear();
+	database::DatabaseSaver databaseSaver;
+	if (!databaseSaver.save(_users, _teams))
+		std::cerr << "Server state could not be fully saved." << std::endl;
 }
 
 std::int32_t

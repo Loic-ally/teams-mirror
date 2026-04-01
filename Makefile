@@ -5,6 +5,7 @@
 ##
 
 BUILD_DIR   = build
+NPROC       = $(shell sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
 
 all:
 	@if [ -f $(BUILD_DIR)/CMakeCache.txt ] && ! grep -q "CMAKE_HOME_DIRECTORY:INTERNAL=$(CURDIR)" $(BUILD_DIR)/CMakeCache.txt; then \
@@ -12,7 +13,7 @@ all:
 		rm -rf $(BUILD_DIR); \
 	fi
 	cmake -S . -B $(BUILD_DIR)
-	cmake --build $(BUILD_DIR)
+	cmake --build $(BUILD_DIR) --parallel $(NPROC)
 
 clean:
 	@if [ -d $(BUILD_DIR) ]; then cmake --build $(BUILD_DIR) --target clean; fi

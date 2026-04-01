@@ -8,7 +8,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <atomic>
 #include <vector>
+
+#include "server/models/team/team.hpp"
+#include "server/models/user/user.hpp"
 
 extern "C" {
     #include <poll.h>
@@ -38,10 +42,17 @@ class ServerManager {
 		std::uint16_t getPort() const noexcept;
 
 	private:
+		static void handleSignal(std::int32_t signal) noexcept;
+		static void installSignalHandler();
+
 		static std::int32_t pollSockets(std::vector<struct pollfd> &pollFds, std::int32_t timeoutMs);
 
 		std::unique_ptr<utils::Socket> _listenSocket;
 		std::uint16_t _port;
+		std::vector<myteams::User> _users;
+		std::vector<myteams::Team> _teams;
+
+		static std::atomic<bool> _isRunning;
 };
 
 } // namespace server
