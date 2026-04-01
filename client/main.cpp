@@ -14,7 +14,12 @@ std::unique_ptr<utils::Socket> createSocket(std::string adress,
                                             std::string port) {
   auto socket =
       std::make_unique<utils::Socket>(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  socket->connect(adress, std::stoi(port));
+  try {
+    socket->connect(adress, std::stoi(port));
+  } catch (...) {
+    std::cout << "Cannot connect to the adress and port given" << std::endl;
+    throw;
+  }
   return socket;
 }
 
