@@ -14,11 +14,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
 set(MYTEAMS_LIB_DIR "${CMAKE_SOURCE_DIR}/libs/myteams")
 set(MYTEAMS_LIB_SO "${MYTEAMS_LIB_DIR}/libmyteams.so")
+set(MYTEAMS_LIB_MACOS_SO "${MYTEAMS_LIB_DIR}/libmyteams_macos.so")
 set(MYTEAMS_LIB_DYLIB "${MYTEAMS_LIB_DIR}/libmyteams.dylib")
+set(MYTEAMS_APPLE_RUNTIME_LIB_NAME "libmyteams_macos.so")
 
 set(MYTEAMS_IMPORTED_LIB "")
 if(APPLE)
-	if(EXISTS "${MYTEAMS_LIB_DYLIB}")
+	if(EXISTS "${MYTEAMS_LIB_MACOS_SO}")
+		set(MYTEAMS_IMPORTED_LIB "${MYTEAMS_LIB_MACOS_SO}")
+	elseif(EXISTS "${MYTEAMS_LIB_DYLIB}")
 		set(MYTEAMS_IMPORTED_LIB "${MYTEAMS_LIB_DYLIB}")
 	elseif(EXISTS "${MYTEAMS_LIB_SO}")
 		message(WARNING "Linux library libmyteams.so detected on macOS. Falling back to local logging stubs.")
@@ -69,6 +73,17 @@ set_target_properties(myteams_server PROPERTIES
 	BUILD_RPATH "${MYTEAMS_RUNTIME_RPATH}"
 	INSTALL_RPATH "${MYTEAMS_RUNTIME_RPATH}"
 )
+if(APPLE AND MYTEAMS_IMPORTED_LIB)
+	add_custom_command(TARGET myteams_server POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"${MYTEAMS_IMPORTED_LIB}"
+			"${MYTEAMS_LIB_DIR}/${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
+		COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change
+			"${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
+			"@loader_path/libs/myteams/${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
+			"$<TARGET_FILE:myteams_server>"
+	)
+endif()
 
 file(GLOB_RECURSE CLIENT_SOURCES CONFIGURE_DEPENDS
 	"${CMAKE_SOURCE_DIR}/client/*.cpp"
@@ -87,3 +102,14 @@ set_target_properties(myteams_cli PROPERTIES
 	BUILD_RPATH "${MYTEAMS_RUNTIME_RPATH}"
 	INSTALL_RPATH "${MYTEAMS_RUNTIME_RPATH}"
 )
+if(APPLE AND MYTEAMS_IMPORTED_LIB)
+	add_custom_command(TARGET myteams_cli POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"${MYTEAMS_IMPORTED_LIB}"
+			"${MYTEAMS_LIB_DIR}/${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
+		COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change
+			"${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
+			"@loader_path/libs/myteams/${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
+			"$<TARGET_FILE:myteams_cli>"
+	)
+endif()
