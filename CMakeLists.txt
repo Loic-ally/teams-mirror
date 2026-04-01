@@ -26,11 +26,15 @@ set_target_properties(myteams PROPERTIES
 	INTERFACE_INCLUDE_DIRECTORIES "${MYTEAMS_LIB_DIR}"
 )
 
+file(GLOB_RECURSE COMMON_UTILS_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/common/utils/*.cpp"
+)
+
 file(GLOB_RECURSE SERVER_SOURCES CONFIGURE_DEPENDS
 	"${CMAKE_SOURCE_DIR}/server/*.cpp"
 )
 
-add_executable(myteams_server ${SERVER_SOURCES})
+add_executable(myteams_server ${SERVER_SOURCES} ${COMMON_UTILS_SOURCES})
 target_include_directories(myteams_server PRIVATE
 	"${CMAKE_SOURCE_DIR}"
 	"${CMAKE_SOURCE_DIR}/server"
@@ -49,7 +53,7 @@ file(GLOB_RECURSE CLIENT_SOURCES CONFIGURE_DEPENDS
 	"${CMAKE_SOURCE_DIR}/client/*.cpp"
 )
 
-add_executable(myteams_cli ${CLIENT_SOURCES})
+add_executable(myteams_cli ${CLIENT_SOURCES} ${COMMON_UTILS_SOURCES})
 target_include_directories(myteams_cli PRIVATE
 	"${CMAKE_SOURCE_DIR}"
 	"${CMAKE_SOURCE_DIR}/client"
