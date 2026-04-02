@@ -1,16 +1,39 @@
 #include "load.hpp"
 
+#include <array>
 #include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <system_error>
-#include <tuple>
 #include <unordered_map>
 #include <vector>
 
 namespace {
+
+constexpr std::size_t USER_FIELD_COUNT = 3;
+constexpr std::size_t TEAM_FIELD_COUNT = 3;
+constexpr std::size_t TEAM_SUBSCRIPTION_FIELD_COUNT = 2;
+constexpr std::size_t CHANNEL_FIELD_COUNT = 4;
+constexpr std::size_t THREAD_FIELD_COUNT = 6;
+constexpr std::size_t MESSAGE_FIELD_COUNT = 5;
+
+struct ChannelPosition {
+	std::size_t teamIndex;
+	std::size_t channelIndex;
+};
+
+struct ThreadPosition {
+	std::size_t teamIndex;
+	std::size_t channelIndex;
+	std::size_t threadIndex;
+};
+
+using TeamIndexes = std::unordered_map<std::string, std::size_t>;
+using ChannelIndexes = std::unordered_map<std::string, ChannelPosition>;
+using ThreadIndexes = std::unordered_map<std::string, ThreadPosition>;
 
 std::vector<std::string>
 splitEscapedLine(const std::string &line, char delimiter)
@@ -74,6 +97,32 @@ parseBoolValue(const std::string &field)
 }
 
 bool
+parseRecord(
+	const std::string &line,
+	char delimiter,
+	std::size_t expectedFieldCount,
+	std::string_view sourceName,
+	std::vector<std::string> &fields,
+	bool requireFirstField,
+	bool requireSecondField)
+{
+	fields = splitEscapedLine(line, delimiter);
+	if (fields.size() != expectedFieldCount) {
+		std::cerr << "Skipping malformed " << sourceName << " line: " << line << std::endl;
+		return false;
+	}
+	if (requireFirstField && fields[0].empty()) {
+		std::cerr << "Skipping malformed " << sourceName << " line: " << line << std::endl;
+		return false;
+	}
+	if (requireSecondField && fields[1].empty()) {
+		std::cerr << "Skipping malformed " << sourceName << " line: " << line << std::endl;
+		return false;
+	}
+	return true;
+}
+
+bool
 readTextFile(const std::filesystem::path &filePath, std::vector<std::string> &lines)
 {
 	std::ifstream inputFile(filePath);
@@ -99,80 +148,62 @@ using detail::LoadedChannel;
 using detail::LoadedTeam;
 using detail::LoadedThread;
 
-DatabaseLoader::DatabaseLoader(std::filesystem::path baseDirectory, char delimiter)
-	: _baseDirectory(std::move(baseDirectory)), _delimiter(delimiter)
+namespace {
+
+void
+loadUsers(const std::vector<std::string> &userLines, char delimiter, std::vector<myteams::User> &users)
 {
-}
-
-bool
-DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Team> &teams) const
-{
-	users.clear();
-	teams.clear();
-
-	std::vector<std::string> userLines;
-	std::vector<std::string> teamLines;
-	std::vector<std::string> teamSubscriptionLines;
-	std::vector<std::string> channelLines;
-	std::vector<std::string> threadLines;
-	std::vector<std::string> messageLines;
-
-	const bool hasUsers = readTextFile(usersFilePath(), userLines);
-	const bool hasTeams = readTextFile(teamsFilePath(), teamLines);
-	const bool hasTeamSubscriptions = readTextFile(teamSubscriptionsFilePath(), teamSubscriptionLines);
-	const bool hasChannels = readTextFile(channelsFilePath(), channelLines);
-	const bool hasThreads = readTextFile(threadsFilePath(), threadLines);
-	const bool hasMessages = readTextFile(messagesFilePath(), messageLines);
-
-	if (!hasUsers && !hasTeams && !hasTeamSubscriptions && !hasChannels && !hasThreads && !hasMessages) {
-		std::cout << "No saved database found. Starting with an empty state." << std::endl;
-		return false;
-	}
-
+	std::vector<std::string> fields;
 	for (const std::string &line : userLines) {
 		if (line.empty())
 			continue;
-		const std::vector<std::string> fields = splitEscapedLine(line, _delimiter);
-		if (fields.size() != 3) {
-			std::cerr << "Skipping malformed users line: " << line << std::endl;
+		if (!parseRecord(line, delimiter, USER_FIELD_COUNT, "users", fields, false, false))
 			continue;
-		}
 		users.emplace_back(fields[0].c_str(), fields[1].c_str(), parseBoolValue(fields[2]));
 	}
+}
 
-	std::vector<LoadedTeam> loadedTeams;
-	std::unordered_map<std::string, std::size_t> teamIndexes;
+void
+loadTeams(
+	const std::vector<std::string> &teamLines,
+	char delimiter,
+	std::vector<LoadedTeam> &loadedTeams,
+	TeamIndexes &teamIndexes)
+{
+	std::vector<std::string> fields;
 	for (const std::string &line : teamLines) {
 		if (line.empty())
 			continue;
-		const std::vector<std::string> fields = splitEscapedLine(line, _delimiter);
-		if (fields.size() != 3 || fields[0].empty()) {
-			std::cerr << "Skipping malformed teams line: " << line << std::endl;
+		if (!parseRecord(line, delimiter, TEAM_FIELD_COUNT, "teams", fields, true, false))
 			continue;
-		}
 		if (teamIndexes.find(fields[0]) != teamIndexes.end()) {
 			std::cerr << "Skipping duplicate team uuid: " << fields[0] << std::endl;
 			continue;
 		}
 
-		LoadedTeam loadedTeam {
+		loadedTeams.push_back({
 			myteams::Team(fields[0].c_str(), fields[1].c_str(), fields[2].c_str()),
-			fields[0],
 			{},
 			{}
-		};
-		teamIndexes.emplace(loadedTeam.uuid, loadedTeams.size());
-		loadedTeams.push_back(std::move(loadedTeam));
+		});
+		teamIndexes.emplace(fields[0], loadedTeams.size() - 1);
 	}
+}
 
+void
+loadTeamSubscriptions(
+	const std::vector<std::string> &teamSubscriptionLines,
+	char delimiter,
+	const TeamIndexes &teamIndexes,
+	std::vector<LoadedTeam> &loadedTeams)
+{
+	std::vector<std::string> fields;
 	for (const std::string &line : teamSubscriptionLines) {
 		if (line.empty())
 			continue;
-		const std::vector<std::string> fields = splitEscapedLine(line, _delimiter);
-		if (fields.size() != 2 || fields[0].empty() || fields[1].empty()) {
-			std::cerr << "Skipping malformed team_subscriptions line: " << line << std::endl;
+		if (!parseRecord(line, delimiter, TEAM_SUBSCRIPTION_FIELD_COUNT, "team_subscriptions", fields, true, true))
 			continue;
-		}
+
 		const auto teamIt = teamIndexes.find(fields[0]);
 		if (teamIt == teamIndexes.end()) {
 			std::cerr << "Skipping team subscription with unknown team uuid: " << fields[0] << std::endl;
@@ -180,116 +211,125 @@ DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Tea
 		}
 		loadedTeams[teamIt->second].subscribedUsers.push_back(fields[1]);
 	}
+}
 
-	std::unordered_map<std::string, std::pair<std::size_t, std::size_t>> channelIndexes;
+void
+loadChannels(
+	const std::vector<std::string> &channelLines,
+	char delimiter,
+	const TeamIndexes &teamIndexes,
+	std::vector<LoadedTeam> &loadedTeams,
+	ChannelIndexes &channelIndexes)
+{
+	std::vector<std::string> fields;
 	for (const std::string &line : channelLines) {
 		if (line.empty())
 			continue;
-		const std::vector<std::string> fields = splitEscapedLine(line, _delimiter);
-		if (fields.size() != 4 || fields[0].empty() || fields[1].empty()) {
-			std::cerr << "Skipping malformed channels line: " << line << std::endl;
+		if (!parseRecord(line, delimiter, CHANNEL_FIELD_COUNT, "channels", fields, true, true))
 			continue;
-		}
 		if (channelIndexes.find(fields[1]) != channelIndexes.end()) {
 			std::cerr << "Skipping duplicate channel uuid: " << fields[1] << std::endl;
 			continue;
 		}
-
 		const auto teamIt = teamIndexes.find(fields[0]);
 		if (teamIt == teamIndexes.end()) {
 			std::cerr << "Skipping channel with unknown team uuid: " << fields[0] << std::endl;
 			continue;
 		}
-
 		std::vector<LoadedChannel> &channels = loadedTeams[teamIt->second].channels;
-		LoadedChannel loadedChannel {
-			myteams::Channel(fields[1].c_str(), fields[2].c_str(), fields[3].c_str()),
-			fields[1],
-			{}
-		};
 		const std::size_t channelIndex = channels.size();
-		channels.push_back(std::move(loadedChannel));
-		channelIndexes.emplace(fields[1], std::make_pair(teamIt->second, channelIndex));
+		channels.push_back({
+			myteams::Channel(fields[1].c_str(), fields[2].c_str(), fields[3].c_str()),
+			{}
+		});
+		channelIndexes.emplace(fields[1], ChannelPosition { teamIt->second, channelIndex });
 	}
+}
 
-	std::unordered_map<std::string, std::tuple<std::size_t, std::size_t, std::size_t>> threadIndexes;
+void
+loadThreads(
+	const std::vector<std::string> &threadLines,
+	char delimiter,
+	const ChannelIndexes &channelIndexes,
+	std::vector<LoadedTeam> &loadedTeams,
+	ThreadIndexes &threadIndexes)
+{
+	std::vector<std::string> fields;
 	for (const std::string &line : threadLines) {
 		if (line.empty())
 			continue;
-		const std::vector<std::string> fields = splitEscapedLine(line, _delimiter);
-		if (fields.size() != 6 || fields[0].empty() || fields[1].empty()) {
-			std::cerr << "Skipping malformed threads line: " << line << std::endl;
+		if (!parseRecord(line, delimiter, THREAD_FIELD_COUNT, "threads", fields, true, true))
 			continue;
-		}
 		if (threadIndexes.find(fields[1]) != threadIndexes.end()) {
 			std::cerr << "Skipping duplicate thread uuid: " << fields[1] << std::endl;
 			continue;
 		}
-
 		std::time_t createdAt = 0;
 		if (!parseTimeValue(fields[3], createdAt)) {
 			std::cerr << "Skipping thread with invalid timestamp: " << line << std::endl;
 			continue;
 		}
-
 		const auto channelIt = channelIndexes.find(fields[0]);
 		if (channelIt == channelIndexes.end()) {
 			std::cerr << "Skipping thread with unknown channel uuid: " << fields[0] << std::endl;
 			continue;
 		}
-
-		const std::size_t teamIndex = channelIt->second.first;
-		const std::size_t channelIndex = channelIt->second.second;
+		const std::size_t teamIndex = channelIt->second.teamIndex;
+		const std::size_t channelIndex = channelIt->second.channelIndex;
 		std::vector<LoadedThread> &threads = loadedTeams[teamIndex].channels[channelIndex].threads;
-		LoadedThread loadedThread {
+		const std::size_t threadIndex = threads.size();
+		threads.push_back({
 			myteams::Thread(
 				fields[1].c_str(),
 				fields[2].c_str(),
 				createdAt,
 				fields[4].c_str(),
 				fields[5].c_str()),
-			fields[1],
 			{}
-		};
-		const std::size_t threadIndex = threads.size();
-		threads.push_back(std::move(loadedThread));
-		threadIndexes.emplace(fields[1], std::make_tuple(teamIndex, channelIndex, threadIndex));
+		});
+		threadIndexes.emplace(fields[1], ThreadPosition { teamIndex, channelIndex, threadIndex });
 	}
+}
 
+void
+loadMessages(
+	const std::vector<std::string> &messageLines,
+	char delimiter,
+	const ThreadIndexes &threadIndexes,
+	std::vector<LoadedTeam> &loadedTeams)
+{
+	std::vector<std::string> fields;
 	for (const std::string &line : messageLines) {
 		if (line.empty())
 			continue;
-		const std::vector<std::string> fields = splitEscapedLine(line, _delimiter);
-		if (fields.size() != 5 || fields[0].empty() || fields[1].empty()) {
-			std::cerr << "Skipping malformed messages line: " << line << std::endl;
+		if (!parseRecord(line, delimiter, MESSAGE_FIELD_COUNT, "messages", fields, true, true))
 			continue;
-		}
-
 		std::time_t createdAt = 0;
 		if (!parseTimeValue(fields[3], createdAt)) {
 			std::cerr << "Skipping message with invalid timestamp: " << line << std::endl;
 			continue;
 		}
-
 		const auto threadIt = threadIndexes.find(fields[0]);
 		if (threadIt == threadIndexes.end()) {
 			std::cerr << "Skipping message with unknown thread uuid: " << fields[0] << std::endl;
 			continue;
 		}
-
-		const auto [teamIndex, channelIndex, threadIndex] = threadIt->second;
-		loadedTeams[teamIndex].channels[channelIndex].threads[threadIndex].replies.emplace_back(
+		const ThreadPosition &threadPosition = threadIt->second;
+		loadedTeams[threadPosition.teamIndex].channels[threadPosition.channelIndex].threads[threadPosition.threadIndex].replies.emplace_back(
 			fields[1].c_str(),
 			fields[2].c_str(),
 			createdAt,
 			fields[4].c_str());
 	}
+}
 
+void
+materializeTeams(std::vector<LoadedTeam> &loadedTeams, std::vector<myteams::Team> &teams)
+{
 	for (LoadedTeam &loadedTeam : loadedTeams) {
 		myteams::Team team = loadedTeam.team;
 		for (const std::string &subscribedUser : loadedTeam.subscribedUsers)
 			team.addSubscribedUser(subscribedUser.c_str());
-
 		for (LoadedChannel &loadedChannel : loadedTeam.channels) {
 			myteams::Channel channel = loadedChannel.channel;
 			for (LoadedThread &loadedThread : loadedChannel.threads) {
@@ -302,6 +342,57 @@ DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Tea
 		}
 		teams.push_back(team);
 	}
+}
+
+} // namespace
+
+DatabaseLoader::DatabaseLoader(std::filesystem::path baseDirectory, char delimiter)
+	: _baseDirectory(std::move(baseDirectory)), _delimiter(delimiter)
+{
+}
+
+bool
+DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Team> &teams) const
+{
+	users.clear();
+	teams.clear();
+	std::vector<std::string> userLines;
+	std::vector<std::string> teamLines;
+	std::vector<std::string> teamSubscriptionLines;
+	std::vector<std::string> channelLines;
+	std::vector<std::string> threadLines;
+	std::vector<std::string> messageLines;
+	struct FileLines {
+		std::filesystem::path path;
+		std::vector<std::string> *lines;
+	};
+	std::array<FileLines, 6> sourceFiles {{
+		{usersFilePath(), &userLines},
+		{teamsFilePath(), &teamLines},
+		{teamSubscriptionsFilePath(), &teamSubscriptionLines},
+		{channelsFilePath(), &channelLines},
+		{threadsFilePath(), &threadLines},
+		{messagesFilePath(), &messageLines}
+	}};
+	bool hasSavedData = false;
+	for (FileLines &file : sourceFiles)
+		hasSavedData = readTextFile(file.path, *file.lines) || hasSavedData;
+	if (!hasSavedData) {
+		std::cout << "No saved database found. Starting with an empty state." << std::endl;
+		return false;
+	}
+	std::vector<LoadedTeam> loadedTeams;
+	TeamIndexes teamIndexes;
+	ChannelIndexes channelIndexes;
+	ThreadIndexes threadIndexes;
+
+	loadUsers(userLines, _delimiter, users);
+	loadTeams(teamLines, _delimiter, loadedTeams, teamIndexes);
+	loadTeamSubscriptions(teamSubscriptionLines, _delimiter, teamIndexes, loadedTeams);
+	loadChannels(channelLines, _delimiter, teamIndexes, loadedTeams, channelIndexes);
+	loadThreads(threadLines, _delimiter, channelIndexes, loadedTeams, threadIndexes);
+	loadMessages(messageLines, _delimiter, threadIndexes, loadedTeams);
+	materializeTeams(loadedTeams, teams);
 
 	std::cout << "Loaded database: "
 		<< users.size() << " users, "
