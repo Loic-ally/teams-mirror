@@ -88,14 +88,16 @@ splitEscapedLine(const std::string &line, char delimiter)
 bool
 parseTimeValue(const std::string &field, std::time_t &outTime)
 {
-	long long parsedTime = 0;
-	const char *begin = field.data();
-	const char *end = begin + field.size();
-	const auto [position, errorCode] = std::from_chars(begin, end, parsedTime);
-	if (errorCode != std::errc() || position != end)
+	try {
+		std::size_t consumed = 0;
+		const long long parsedTime = std::stoll(field, &consumed, 10);
+		if (consumed != field.size())
+			return false;
+		outTime = static_cast<std::time_t>(parsedTime);
+		return true;
+	} catch (...) {
 		return false;
-	outTime = static_cast<std::time_t>(parsedTime);
-	return true;
+	}
 }
 
 bool
@@ -347,6 +349,7 @@ materializeTeams(std::vector<LoadedTeam> &loadedTeams, std::vector<myteams::Team
 		myteams::Team team = loadedTeam.team;
 		for (const std::string &subscribedUser : loadedTeam.subscribedUsers)
 			team.addSubscribedUser(subscribedUser.c_str());
+
 		for (LoadedChannel &loadedChannel : loadedTeam.channels) {
 			myteams::Channel channel = loadedChannel.channel;
 			for (LoadedThread &loadedThread : loadedChannel.threads) {
