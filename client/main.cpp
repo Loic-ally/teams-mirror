@@ -8,7 +8,9 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include "parser/parser.hpp"
 #include <utility>
+#include "core/client.hpp"
 
 std::unique_ptr<utils::Socket> createSocket(std::string adress,
                                             std::string port) {
@@ -21,6 +23,29 @@ std::unique_ptr<utils::Socket> createSocket(std::string adress,
     throw;
   }
   return socket;
+}
+
+void handleInput(client::Client &clientData, client::ParsedInput &input) {
+    std::cout << input.getCommand() << " | ";
+    while (!input.fail()) {
+        std::cout << input.getArg<std::string>() << " | ";
+    }
+    std::cout << "fail here" << std::endl;
+}
+
+std::int32_t runLoop(std::unique_ptr<utils::Socket> socket) {
+    client::Client clientData;
+
+    clientData.socket = std::move(socket);
+    while (clientData.running) {
+        client::ParsedInput input;
+        try {
+            handleInput(clientData, input);
+        } catch (...) {
+            return 84;
+        }
+    }
+    return 0;
 }
 
 std::int32_t main(std::int32_t ac, char **av) {
@@ -38,6 +63,7 @@ std::int32_t main(std::int32_t ac, char **av) {
 
   try {
     auto socket = createSocket(av[1], av[2]);
+    return runLoop(std::move(socket));
   } catch (std::exception &e) {
     std::cerr << e.what() << std::endl;
     return 84;
