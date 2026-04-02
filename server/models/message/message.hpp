@@ -2,6 +2,7 @@
 
 #include <ctime>
 #include <cstring>
+#include <string_view>
 
 #include "common/limits.hpp"
 
@@ -16,10 +17,10 @@ namespace myteams
         Message() = default;
 
         Message(
-            const char *uuid,
-            const char *author_uuid,
+            std::string_view uuid,
+            std::string_view author_uuid,
             std::time_t created_at,
-            const char *body)
+            std::string_view body)
             : created_at_(created_at)
         {
             copy_buffer(uuid_, uuid);
@@ -47,12 +48,12 @@ namespace myteams
             return body_;
         }
 
-        void setUuid(const char *uuid) noexcept
+        void setUuid(std::string_view uuid) noexcept
         {
             copy_buffer(uuid_, uuid);
         }
 
-        void setAuthorUuid(const char *author_uuid) noexcept
+        void setAuthorUuid(std::string_view author_uuid) noexcept
         {
             copy_buffer(author_uuid_, author_uuid);
         }
@@ -62,21 +63,20 @@ namespace myteams
             created_at_ = created_at;
         }
 
-        void setBody(const char *body) noexcept
+        void setBody(std::string_view body) noexcept
         {
             copy_buffer(body_, body);
         }
 
     private:
+
         template <std::size_t N>
-        static void copy_buffer(char (&destination)[N], const char *source) noexcept
+        static void copy_buffer(char (&destination)[N], std::string_view source) noexcept
         {
-            if (source == nullptr) {
-                destination[0] = '\0';
-                return;
-            }
-            std::strncpy(destination, source, N - 1);
-            destination[N - 1] = '\0';
+            const std::size_t copiedLength =
+                source.size() < (N - 1) ? source.size() : (N - 1);
+            std::memcpy(destination, source.data(), copiedLength);
+            destination[copiedLength] = '\0';
         }
 
         char uuid_[UUID_LENGTH] {};

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstring>
+#include <string_view>
 #include <vector>
 
 #include "common/limits.hpp"
@@ -19,7 +20,7 @@ namespace myteams
 
         Team() = default;
 
-        Team(const char *uuid, const char *name, const char *description)
+        Team(std::string_view uuid, std::string_view name, std::string_view description)
         {
             copy_buffer(uuid_, uuid);
             copy_buffer(name_, name);
@@ -51,22 +52,22 @@ namespace myteams
             return channels_;
         }
 
-        void setUuid(const char *uuid) noexcept
+        void setUuid(std::string_view uuid) noexcept
         {
             copy_buffer(uuid_, uuid);
         }
 
-        void setName(const char *name) noexcept
+        void setName(std::string_view name) noexcept
         {
             copy_buffer(name_, name);
         }
 
-        void setDescription(const char *description) noexcept
+        void setDescription(std::string_view description) noexcept
         {
             copy_buffer(description_, description);
         }
 
-        void addSubscribedUser(const char *user_uuid)
+        void addSubscribedUser(std::string_view user_uuid)
         {
             subscribed_user_uuids_.push_back(make_uuid(user_uuid));
         }
@@ -77,27 +78,23 @@ namespace myteams
         }
 
     private:
+
         template <std::size_t N>
-        static void copy_buffer(char (&destination)[N], const char *source) noexcept
+        static void copy_buffer(char (&destination)[N], std::string_view source) noexcept
         {
-            if (source == nullptr) {
-                destination[0] = '\0';
-                return;
-            }
-            std::strncpy(destination, source, N - 1);
-            destination[N - 1] = '\0';
+            const std::size_t copiedLength =
+                source.size() < (N - 1) ? source.size() : (N - 1);
+            std::memcpy(destination, source.data(), copiedLength);
+            destination[copiedLength] = '\0';
         }
 
-        static UserUuid make_uuid(const char *source) noexcept
+        static UserUuid make_uuid(std::string_view source) noexcept
         {
             UserUuid uuid {};
-
-            if (source == nullptr) {
-                uuid[0] = '\0';
-                return uuid;
-            }
-            std::strncpy(uuid.data(), source, uuid.size() - 1);
-            uuid[uuid.size() - 1] = '\0';
+            const std::size_t copiedLength =
+                source.size() < (uuid.size() - 1) ? source.size() : (uuid.size() - 1);
+            std::memcpy(uuid.data(), source.data(), copiedLength);
+            uuid[copiedLength] = '\0';
             return uuid;
         }
 
