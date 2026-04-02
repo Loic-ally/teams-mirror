@@ -12,7 +12,8 @@ Sender::sendBytes(std::int32_t socketFd, const char *buffer, std::size_t bufferS
 {
 	try {
 		const utils::Socket socket(socketFd);
-		return socket.send(buffer, bufferSize);
+		const std::string data(buffer, bufferSize);
+		return static_cast<std::int64_t>(socket.write(data));
 	} catch (const utils::SocketException &exception) {
 		throw SocketSendException(exception.errorNumber());
 	}

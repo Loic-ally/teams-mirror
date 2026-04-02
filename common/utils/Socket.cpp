@@ -105,28 +105,6 @@ Socket::accept() const {
     return {std::move(res1), std::move(res2)};
 }
 
-std::int64_t Socket::send(const void *buffer, std::size_t size) const {
-    ssize_t sendResult = -1;
-    do {
-        sendResult = ::send(_fd, buffer, size, 0);
-    } while (sendResult < 0 && errno == EINTR);
-    if (sendResult < 0) {
-        throw SocketException("send() failed", errno);
-    }
-    return static_cast<std::int64_t>(sendResult);
-}
-
-std::int64_t Socket::recv(void *buffer, std::size_t size) const {
-    ssize_t recvResult = -1;
-    do {
-        recvResult = ::recv(_fd, buffer, size, 0);
-    } while (recvResult < 0 && errno == EINTR);
-    if (recvResult < 0) {
-        throw SocketException("recv() failed", errno);
-    }
-    return static_cast<std::int64_t>(recvResult);
-}
-
 std::int8_t Socket::poll(std::int8_t events, std::size_t timeout) const {
     struct pollfd config{
         _fd,

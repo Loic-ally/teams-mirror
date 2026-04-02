@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cerrno>
+#include <cstring>
 
 namespace server::network {
 
@@ -13,7 +14,10 @@ Reciever::recvBytes(std::int32_t socketFd, char *buffer, std::size_t bufferSize)
 {
 	try {
 		const utils::Socket socket(socketFd);
-		return socket.recv(buffer, bufferSize);
+		const std::string data = socket.read(bufferSize);
+		if (!data.empty())
+			std::memcpy(buffer, data.data(), data.size());
+		return static_cast<std::int64_t>(data.size());
 	} catch (const utils::SocketException &exception) {
 		throw SocketReceiveException(exception.errorNumber());
 	}
