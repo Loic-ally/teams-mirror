@@ -42,8 +42,6 @@ class Socket {
     void listen(int backlog = 4096) const;
     std::pair<std::unique_ptr<Socket>, std::unique_ptr<struct sockaddr>>
     accept() const;
-    std::int64_t send(const void *buffer, std::size_t size) const;
-    std::int64_t recv(void *buffer, std::size_t size) const;
     std::int8_t poll(std::int8_t events,
                      std::size_t timeout = 0) const;
     std::size_t write(const std::string &str) const;
