@@ -164,7 +164,7 @@ loadUsers(const std::vector<std::string> &userLines, char delimiter, std::vector
 			continue;
 		if (!parseRecord(line, userFormat, fields))
 			continue;
-		users.emplace_back(fields.at(0).c_str(), fields.at(1).c_str(), parseBoolValue(fields.at(2)));
+		users.emplace_back(fields.at(0), fields.at(1), parseBoolValue(fields.at(2)));
 	}
 }
 
@@ -188,7 +188,7 @@ loadTeams(
 		}
 
 		loadedTeams.push_back({
-			myteams::Team(fields.at(0).c_str(), fields.at(1).c_str(), fields.at(2).c_str()),
+			myteams::Team(fields.at(0), fields.at(1), fields.at(2)),
 			{},
 			{}
 		});
@@ -253,7 +253,7 @@ loadChannels(
 		std::vector<LoadedChannel> &channels = loadedTeams.at(teamIt->second).channels;
 		const std::size_t channelIndex = channels.size();
 		channels.push_back({
-			myteams::Channel(fields.at(1).c_str(), fields.at(2).c_str(), fields.at(3).c_str()),
+			myteams::Channel(fields.at(1), fields.at(2), fields.at(3)),
 			{}
 		});
 		channelIndexes.emplace(fields.at(1), ChannelPosition { teamIt->second, channelIndex });
@@ -295,11 +295,11 @@ loadThreads(
 		const std::size_t threadIndex = threads.size();
 		threads.push_back({
 			myteams::Thread(
-				fields.at(1).c_str(),
-				fields.at(2).c_str(),
+				fields.at(1),
+				fields.at(2),
 				createdAt,
-				fields.at(4).c_str(),
-				fields.at(5).c_str()),
+				fields.at(4),
+				fields.at(5)),
 			{}
 		});
 		threadIndexes.emplace(fields.at(1), ThreadPosition { teamIndex, channelIndex, threadIndex });
@@ -335,10 +335,10 @@ loadMessages(
 			.channels.at(threadPosition.channelIndex)
 			.threads.at(threadPosition.threadIndex)
 			.replies.emplace_back(
-			fields.at(1).c_str(),
-			fields.at(2).c_str(),
+			fields.at(1),
+			fields.at(2),
 			createdAt,
-			fields.at(4).c_str());
+			fields.at(4));
 	}
 }
 
@@ -348,7 +348,7 @@ materializeTeams(std::vector<LoadedTeam> &loadedTeams, std::vector<myteams::Team
 	for (LoadedTeam &loadedTeam : loadedTeams) {
 		myteams::Team team = loadedTeam.team;
 		for (const std::string &subscribedUser : loadedTeam.subscribedUsers)
-			team.addSubscribedUser(subscribedUser.c_str());
+			team.addSubscribedUser(subscribedUser);
 
 		for (LoadedChannel &loadedChannel : loadedTeam.channels) {
 			myteams::Channel channel = loadedChannel.channel;
