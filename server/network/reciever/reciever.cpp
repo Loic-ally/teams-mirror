@@ -1,27 +1,22 @@
 #include "reciever.hpp"
+#include "common/utils/Socket.hpp"
 #include "core/client_manager/client_manager.hpp"
 #include "core/exceptions/server_exceptions.hpp"
 
 #include <array>
 #include <cerrno>
 
-extern "C" {
-    #include <sys/socket.h>
-    #include <sys/types.h>
-}
-
 namespace server::network {
 
 std::int64_t
 Reciever::recvBytes(std::int32_t socketFd, char *buffer, std::size_t bufferSize)
 {
-	ssize_t recvResult = -1;
-	do {
-		recvResult = ::recv(socketFd, buffer, bufferSize, 0);
-	} while (recvResult < 0 && errno == EINTR);
-	if (recvResult < 0)
-		throw SocketReceiveException(errno);
-	return static_cast<std::int64_t>(recvResult);
+	try {
+		const utils::Socket socket(socketFd);
+		return socket.recv(buffer, bufferSize);
+	} catch (const utils::SocketException &exception) {
+		throw SocketReceiveException(exception.errorNumber());
+	}
 }
 
 bool
