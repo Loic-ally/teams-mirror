@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstring>
+#include <string_view>
 
 #include "common/limits.hpp"
 
@@ -14,7 +15,7 @@ namespace myteams
     public:
         User() = default;
 
-        User(const char *uuid, const char *name, bool is_logged_in = false)
+        User(std::string_view uuid, std::string_view name, bool is_logged_in = false)
             : is_logged_in_(is_logged_in)
         {
             copy_buffer(uuid_, uuid);
@@ -36,12 +37,12 @@ namespace myteams
             return is_logged_in_;
         }
 
-        void setUuid(const char *uuid) noexcept
+        void setUuid(std::string_view uuid) noexcept
         {
             copy_buffer(uuid_, uuid);
         }
 
-        void setName(const char *name) noexcept
+        void setName(std::string_view name) noexcept
         {
             copy_buffer(name_, name);
         }
@@ -52,15 +53,14 @@ namespace myteams
         }
 
     private:
+
         template <std::size_t N>
-        static void copy_buffer(char (&destination)[N], const char *source) noexcept
+        static void copy_buffer(char (&destination)[N], std::string_view source) noexcept
         {
-            if (source == nullptr) {
-                destination[0] = '\0';
-                return;
-            }
-            std::strncpy(destination, source, N - 1);
-            destination[N - 1] = '\0';
+            const std::size_t copiedLength =
+                source.size() < (N - 1) ? source.size() : (N - 1);
+            std::memcpy(destination, source.data(), copiedLength);
+            destination[copiedLength] = '\0';
         }
 
         char uuid_[UUID_LENGTH] {};

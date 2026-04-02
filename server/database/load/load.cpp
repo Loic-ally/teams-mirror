@@ -1,11 +1,9 @@
 #include "load.hpp"
 
-#include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <system_error>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -57,14 +55,16 @@ splitEscapedLine(const std::string &line, char delimiter)
 bool
 parseTimeValue(const std::string &field, std::time_t &outTime)
 {
-	long long parsedTime = 0;
-	const char *begin = field.data();
-	const char *end = begin + field.size();
-	const auto [position, errorCode] = std::from_chars(begin, end, parsedTime);
-	if (errorCode != std::errc() || position != end)
+	try {
+		std::size_t consumed = 0;
+		const long long parsedTime = std::stoll(field, &consumed, 10);
+		if (consumed != field.size())
+			return false;
+		outTime = static_cast<std::time_t>(parsedTime);
+		return true;
+	} catch (...) {
 		return false;
-	outTime = static_cast<std::time_t>(parsedTime);
-	return true;
+	}
 }
 
 bool
@@ -137,7 +137,7 @@ DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Tea
 			std::cerr << "Skipping malformed users line: " << line << std::endl;
 			continue;
 		}
-		users.emplace_back(fields[0].c_str(), fields[1].c_str(), parseBoolValue(fields[2]));
+		users.emplace_back(fields[0], fields[1], parseBoolValue(fields[2]));
 	}
 
 	std::vector<LoadedTeam> loadedTeams;
@@ -156,7 +156,7 @@ DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Tea
 		}
 
 		LoadedTeam loadedTeam {
-			myteams::Team(fields[0].c_str(), fields[1].c_str(), fields[2].c_str()),
+			myteams::Team(fields[0], fields[1], fields[2]),
 			fields[0],
 			{},
 			{}
@@ -203,7 +203,7 @@ DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Tea
 
 		std::vector<LoadedChannel> &channels = loadedTeams[teamIt->second].channels;
 		LoadedChannel loadedChannel {
-			myteams::Channel(fields[1].c_str(), fields[2].c_str(), fields[3].c_str()),
+			myteams::Channel(fields[1], fields[2], fields[3]),
 			fields[1],
 			{}
 		};
@@ -243,11 +243,11 @@ DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Tea
 		std::vector<LoadedThread> &threads = loadedTeams[teamIndex].channels[channelIndex].threads;
 		LoadedThread loadedThread {
 			myteams::Thread(
-				fields[1].c_str(),
-				fields[2].c_str(),
+				fields[1],
+				fields[2],
 				createdAt,
-				fields[4].c_str(),
-				fields[5].c_str()),
+				fields[4],
+				fields[5]),
 			fields[1],
 			{}
 		};
@@ -279,16 +279,16 @@ DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Tea
 
 		const auto [teamIndex, channelIndex, threadIndex] = threadIt->second;
 		loadedTeams[teamIndex].channels[channelIndex].threads[threadIndex].replies.emplace_back(
-			fields[1].c_str(),
-			fields[2].c_str(),
+			fields[1],
+			fields[2],
 			createdAt,
-			fields[4].c_str());
+			fields[4]);
 	}
 
 	for (LoadedTeam &loadedTeam : loadedTeams) {
 		myteams::Team team = loadedTeam.team;
 		for (const std::string &subscribedUser : loadedTeam.subscribedUsers)
-			team.addSubscribedUser(subscribedUser.c_str());
+			team.addSubscribedUser(subscribedUser);
 
 		for (LoadedChannel &loadedChannel : loadedTeam.channels) {
 			myteams::Channel channel = loadedChannel.channel;

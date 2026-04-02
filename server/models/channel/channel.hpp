@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstring>
+#include <string_view>
 #include <vector>
 
 #include "common/limits.hpp"
@@ -16,7 +17,7 @@ namespace myteams
     public:
         Channel() = default;
 
-        Channel(const char *uuid, const char *name, const char *description)
+        Channel(std::string_view uuid, std::string_view name, std::string_view description)
         {
             copy_buffer(uuid_, uuid);
             copy_buffer(name_, name);
@@ -43,17 +44,17 @@ namespace myteams
             return threads_;
         }
 
-        void setUuid(const char *uuid) noexcept
+        void setUuid(std::string_view uuid) noexcept
         {
             copy_buffer(uuid_, uuid);
         }
 
-        void setName(const char *name) noexcept
+        void setName(std::string_view name) noexcept
         {
             copy_buffer(name_, name);
         }
 
-        void setDescription(const char *description) noexcept
+        void setDescription(std::string_view description) noexcept
         {
             copy_buffer(description_, description);
         }
@@ -64,15 +65,14 @@ namespace myteams
         }
 
     private:
+
         template <std::size_t N>
-        static void copy_buffer(char (&destination)[N], const char *source) noexcept
+        static void copy_buffer(char (&destination)[N], std::string_view source) noexcept
         {
-            if (source == nullptr) {
-                destination[0] = '\0';
-                return;
-            }
-            std::strncpy(destination, source, N - 1);
-            destination[N - 1] = '\0';
+            const std::size_t copiedLength =
+                source.size() < (N - 1) ? source.size() : (N - 1);
+            std::memcpy(destination, source.data(), copiedLength);
+            destination[copiedLength] = '\0';
         }
 
         char uuid_[UUID_LENGTH] {};
