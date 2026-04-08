@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstring>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -20,24 +21,25 @@ namespace myteams
 
         Team() = default;
 
-        Team(std::string_view uuid, std::string_view name, std::string_view description)
+        Team(const std::string &uuid, const std::string &name, const std::string &description)
         {
             copy_buffer(uuid_, uuid);
             copy_buffer(name_, name);
             copy_buffer(description_, description);
         }
 
-        const char *getUuid() const noexcept
+
+        const std::string_view getUuid() const noexcept
         {
             return uuid_;
         }
 
-        const char *getName() const noexcept
+        const std::string_view getName() const noexcept
         {
             return name_;
         }
 
-        const char *getDescription() const noexcept
+        const std::string_view getDescription() const noexcept
         {
             return description_;
         }
@@ -52,22 +54,22 @@ namespace myteams
             return channels_;
         }
 
-        void setUuid(std::string_view uuid) noexcept
+        void setUuid(const std::string &uuid) noexcept
         {
             copy_buffer(uuid_, uuid);
         }
 
-        void setName(std::string_view name) noexcept
+        void setName(const std::string &name) noexcept
         {
             copy_buffer(name_, name);
         }
 
-        void setDescription(std::string_view description) noexcept
+        void setDescription(const std::string &description) noexcept
         {
             copy_buffer(description_, description);
         }
 
-        void addSubscribedUser(std::string_view user_uuid)
+        void addSubscribedUser(const std::string &user_uuid)
         {
             subscribed_user_uuids_.push_back(make_uuid(user_uuid));
         }
@@ -78,21 +80,18 @@ namespace myteams
         }
 
     private:
-
         template <std::size_t N>
-        static void copy_buffer(char (&destination)[N], std::string_view source) noexcept
+        static void copy_buffer(char (&destination)[N], const std::string &source) noexcept
         {
-            const std::size_t copiedLength =
-                source.size() < (N - 1) ? source.size() : (N - 1);
+            const std::size_t copiedLength = source.size() < (N - 1) ? source.size() : (N - 1);
             std::memcpy(destination, source.data(), copiedLength);
             destination[copiedLength] = '\0';
         }
 
-        static UserUuid make_uuid(std::string_view source) noexcept
+        static UserUuid make_uuid(const std::string &source) noexcept
         {
             UserUuid uuid {};
-            const std::size_t copiedLength =
-                source.size() < (uuid.size() - 1) ? source.size() : (uuid.size() - 1);
+            const std::size_t copiedLength = source.size() < (uuid.size() - 1) ? source.size() : (uuid.size() - 1);
             std::memcpy(uuid.data(), source.data(), copiedLength);
             uuid[copiedLength] = '\0';
             return uuid;

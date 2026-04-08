@@ -2,6 +2,7 @@
 
 #include <ctime>
 #include <cstring>
+#include <string>
 #include <string_view>
 
 #include "common/limits.hpp"
@@ -17,10 +18,10 @@ namespace myteams
         Message() = default;
 
         Message(
-            std::string_view uuid,
-            std::string_view author_uuid,
+            const std::string &uuid,
+            const std::string &author_uuid,
             std::time_t created_at,
-            std::string_view body)
+            const std::string &body)
             : created_at_(created_at)
         {
             copy_buffer(uuid_, uuid);
@@ -28,32 +29,32 @@ namespace myteams
             copy_buffer(body_, body);
         }
 
-        const char *getUuid() const noexcept
+        const std::string_view getUuid() const noexcept
         {
             return uuid_;
         }
 
-        const char *getAuthorUuid() const noexcept
+        const std::string_view getAuthorUuid() const noexcept
         {
             return author_uuid_;
         }
 
-        std::time_t getCreatedAt() const noexcept
+        const std::time_t getCreatedAt() const noexcept
         {
             return created_at_;
         }
 
-        const char *getBody() const noexcept
+        const std::string_view getBody() const noexcept
         {
             return body_;
         }
 
-        void setUuid(std::string_view uuid) noexcept
+        void setUuid(const std::string &uuid) noexcept
         {
             copy_buffer(uuid_, uuid);
         }
 
-        void setAuthorUuid(std::string_view author_uuid) noexcept
+        void setAuthorUuid(const std::string &author_uuid) noexcept
         {
             copy_buffer(author_uuid_, author_uuid);
         }
@@ -63,18 +64,16 @@ namespace myteams
             created_at_ = created_at;
         }
 
-        void setBody(std::string_view body) noexcept
+        void setBody(const std::string &body) noexcept
         {
             copy_buffer(body_, body);
         }
 
     private:
-
         template <std::size_t N>
-        static void copy_buffer(char (&destination)[N], std::string_view source) noexcept
+        static void copy_buffer(char (&destination)[N], const std::string &source) noexcept
         {
-            const std::size_t copiedLength =
-                source.size() < (N - 1) ? source.size() : (N - 1);
+            const std::size_t copiedLength = source.size() < (N - 1) ? source.size() : (N - 1);
             std::memcpy(destination, source.data(), copiedLength);
             destination[copiedLength] = '\0';
         }

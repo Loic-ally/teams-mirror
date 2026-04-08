@@ -18,19 +18,16 @@ namespace detail {
 
 struct LoadedThread {
 	myteams::Thread thread;
-	std::string uuid;
 	std::vector<myteams::Message> replies;
 };
 
 struct LoadedChannel {
 	myteams::Channel channel;
-	std::string uuid;
 	std::vector<LoadedThread> threads;
 };
 
 struct LoadedTeam {
 	myteams::Team team;
-	std::string uuid;
 	std::vector<std::string> subscribedUsers;
 	std::vector<LoadedChannel> channels;
 };

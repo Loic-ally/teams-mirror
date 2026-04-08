@@ -4,7 +4,6 @@
 #include "core/exceptions/server_exceptions.hpp"
 
 #include <cerrno>
-#include <string>
 
 namespace server::network {
 
@@ -13,10 +12,8 @@ Sender::sendBytes(std::int32_t socketFd, const char *buffer, std::size_t bufferS
 {
 	try {
 		const utils::Socket socket(socketFd);
-		if (buffer == nullptr || bufferSize == 0)
-			return 0;
-		const std::string payload(buffer, bufferSize);
-		return static_cast<std::int64_t>(socket.write(payload));
+		const std::string data(buffer, bufferSize);
+		return static_cast<std::int64_t>(socket.write(data));
 	} catch (const utils::SocketException &exception) {
 		throw SocketSendException(exception.errorNumber());
 	}
