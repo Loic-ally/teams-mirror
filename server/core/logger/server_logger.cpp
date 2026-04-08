@@ -1,6 +1,7 @@
 #include "server/core/logger/server_logger.hpp"
 
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -16,6 +17,15 @@ std::string makeCString(std::string_view value)
     return std::string(value);
 }
 
+int normalizeLibCallResult(const int rawResult)
+{
+    if (rawResult < 0) {
+        throw std::runtime_error(
+            "libmyteams server call failed with return code " + std::to_string(rawResult));
+    }
+    return rawResult;
+}
+
 } // namespace
 
 int ServerLogger::logTeamCreated(
@@ -27,10 +37,10 @@ int ServerLogger::logTeamCreated(
     const std::string teamNameBuffer = makeCString(teamName);
     const std::string userUuidBuffer = makeCString(userUuid);
 
-    return server_event_team_created(
+    return normalizeLibCallResult(server_event_team_created(
         teamUuidBuffer.c_str(),
         teamNameBuffer.c_str(),
-        userUuidBuffer.c_str());
+        userUuidBuffer.c_str()));
 }
 
 int ServerLogger::logChannelCreated(
@@ -42,10 +52,10 @@ int ServerLogger::logChannelCreated(
     const std::string channelUuidBuffer = makeCString(channelUuid);
     const std::string channelNameBuffer = makeCString(channelName);
 
-    return server_event_channel_created(
+    return normalizeLibCallResult(server_event_channel_created(
         teamUuidBuffer.c_str(),
         channelUuidBuffer.c_str(),
-        channelNameBuffer.c_str());
+        channelNameBuffer.c_str()));
 }
 
 int ServerLogger::logThreadCreated(
@@ -61,12 +71,12 @@ int ServerLogger::logThreadCreated(
     const std::string threadTitleBuffer = makeCString(threadTitle);
     const std::string threadBodyBuffer = makeCString(threadBody);
 
-    return server_event_thread_created(
+    return normalizeLibCallResult(server_event_thread_created(
         channelUuidBuffer.c_str(),
         threadUuidBuffer.c_str(),
         userUuidBuffer.c_str(),
         threadTitleBuffer.c_str(),
-        threadBodyBuffer.c_str());
+        threadBodyBuffer.c_str()));
 }
 
 int ServerLogger::logReplyCreated(
@@ -78,10 +88,10 @@ int ServerLogger::logReplyCreated(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string replyBodyBuffer = makeCString(replyBody);
 
-    return server_event_reply_created(
+    return normalizeLibCallResult(server_event_reply_created(
         threadUuidBuffer.c_str(),
         userUuidBuffer.c_str(),
-        replyBodyBuffer.c_str());
+        replyBodyBuffer.c_str()));
 }
 
 int ServerLogger::logUserSubscribed(
@@ -91,9 +101,9 @@ int ServerLogger::logUserSubscribed(
     const std::string teamUuidBuffer = makeCString(teamUuid);
     const std::string userUuidBuffer = makeCString(userUuid);
 
-    return server_event_user_subscribed(
+    return normalizeLibCallResult(server_event_user_subscribed(
         teamUuidBuffer.c_str(),
-        userUuidBuffer.c_str());
+        userUuidBuffer.c_str()));
 }
 
 int ServerLogger::logUserUnsubscribed(
@@ -103,9 +113,9 @@ int ServerLogger::logUserUnsubscribed(
     const std::string teamUuidBuffer = makeCString(teamUuid);
     const std::string userUuidBuffer = makeCString(userUuid);
 
-    return server_event_user_unsubscribed(
+    return normalizeLibCallResult(server_event_user_unsubscribed(
         teamUuidBuffer.c_str(),
-        userUuidBuffer.c_str());
+        userUuidBuffer.c_str()));
 }
 
 int ServerLogger::logUserCreated(
@@ -115,9 +125,9 @@ int ServerLogger::logUserCreated(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string userNameBuffer = makeCString(userName);
 
-    return server_event_user_created(
+    return normalizeLibCallResult(server_event_user_created(
         userUuidBuffer.c_str(),
-        userNameBuffer.c_str());
+        userNameBuffer.c_str()));
 }
 
 int ServerLogger::logUserLoaded(
@@ -127,23 +137,23 @@ int ServerLogger::logUserLoaded(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string userNameBuffer = makeCString(userName);
 
-    return server_event_user_loaded(
+    return normalizeLibCallResult(server_event_user_loaded(
         userUuidBuffer.c_str(),
-        userNameBuffer.c_str());
+        userNameBuffer.c_str()));
 }
 
 int ServerLogger::logUserLoggedIn(const std::string_view userUuid)
 {
     const std::string userUuidBuffer = makeCString(userUuid);
 
-    return server_event_user_logged_in(userUuidBuffer.c_str());
+    return normalizeLibCallResult(server_event_user_logged_in(userUuidBuffer.c_str()));
 }
 
 int ServerLogger::logUserLoggedOut(const std::string_view userUuid)
 {
     const std::string userUuidBuffer = makeCString(userUuid);
 
-    return server_event_user_logged_out(userUuidBuffer.c_str());
+    return normalizeLibCallResult(server_event_user_logged_out(userUuidBuffer.c_str()));
 }
 
 int ServerLogger::logPrivateMessageSent(
@@ -155,10 +165,10 @@ int ServerLogger::logPrivateMessageSent(
     const std::string receiverUuidBuffer = makeCString(receiverUuid);
     const std::string messageBodyBuffer = makeCString(messageBody);
 
-    return server_event_private_message_sended(
+    return normalizeLibCallResult(server_event_private_message_sended(
         senderUuidBuffer.c_str(),
         receiverUuidBuffer.c_str(),
-        messageBodyBuffer.c_str());
+        messageBodyBuffer.c_str()));
 }
 
 void ServerLogger::logInternalError(const std::string_view message)
