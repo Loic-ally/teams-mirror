@@ -29,22 +29,22 @@ namespace myteams
             copy_buffer(body_, body);
         }
 
-        const std::string_view getUuid() const noexcept
+        std::string_view getUuid() const noexcept
         {
             return uuid_;
         }
 
-        const std::string_view getAuthorUuid() const noexcept
+        std::string_view getAuthorUuid() const noexcept
         {
             return author_uuid_;
         }
 
-        const std::time_t getCreatedAt() const noexcept
+        std::time_t getCreatedAt() const noexcept
         {
             return created_at_;
         }
 
-        const std::string_view getBody() const noexcept
+        std::string_view getBody() const noexcept
         {
             return body_;
         }

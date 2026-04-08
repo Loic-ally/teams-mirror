@@ -16,6 +16,10 @@ public:
   const std::string &getCommand() const { return _command; };
 
   bool fail() const { return _failArgs; };
+  bool hasRemainingArgs() {
+    _arguments >> std::ws;
+    return _arguments.peek() != std::char_traits<char>::eof();
+  }
 
   template <typename T> T getArg() {
     if (_failArgs) {

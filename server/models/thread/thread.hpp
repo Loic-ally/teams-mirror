@@ -43,7 +43,7 @@ namespace myteams
             return author_uuid_;
         }
 
-        const std::time_t getCreatedAt() const noexcept
+        std::time_t getCreatedAt() const noexcept
         {
             return created_at_;
         }
