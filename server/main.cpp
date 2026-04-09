@@ -22,10 +22,8 @@ parsePort(const char *arg, std::uint16_t &outPort)
         return false;
     }
     unsigned long parsedPort = 0;
-    const char *begin = portArg.data();
-    const char *end = begin + portArg.size();
-    const auto [ptr, ec] = std::from_chars(begin, end, parsedPort);
-    if (ec != std::errc() || ptr != end || parsedPort == 0 || parsedPort > 65535) {
+    const auto [ptr, ec] = std::from_chars(portArg.begin(), portArg.end(), parsedPort);
+    if (ec != std::errc() || ptr != portArg.end() || parsedPort == 0 || parsedPort > 65535) {
         return false;
     }
     outPort = static_cast<std::uint16_t>(parsedPort);

@@ -1,5 +1,6 @@
 #include "client/display/printer.hpp"
 
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -14,6 +15,15 @@ std::string makeCString(const std::string_view value)
     return std::string(value);
 }
 
+int normalizeLibCallResult(const int rawResult)
+{
+    if (rawResult < 0) {
+        throw std::runtime_error(
+            "libmyteams client call failed with return code " + std::to_string(rawResult));
+    }
+    return rawResult;
+}
+
 } // namespace
 
 int Printer::eventLoggedIn(
@@ -23,9 +33,9 @@ int Printer::eventLoggedIn(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string userNameBuffer = makeCString(userName);
 
-    return client_event_logged_in(
+    return normalizeLibCallResult(client_event_logged_in(
         userUuidBuffer.c_str(),
-        userNameBuffer.c_str());
+        userNameBuffer.c_str()));
 }
 
 int Printer::eventLoggedOut(
@@ -35,9 +45,9 @@ int Printer::eventLoggedOut(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string userNameBuffer = makeCString(userName);
 
-    return client_event_logged_out(
+    return normalizeLibCallResult(client_event_logged_out(
         userUuidBuffer.c_str(),
-        userNameBuffer.c_str());
+        userNameBuffer.c_str()));
 }
 
 int Printer::eventPrivateMessageReceived(
@@ -47,9 +57,9 @@ int Printer::eventPrivateMessageReceived(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string messageBodyBuffer = makeCString(messageBody);
 
-    return client_event_private_message_received(
+    return normalizeLibCallResult(client_event_private_message_received(
         userUuidBuffer.c_str(),
-        messageBodyBuffer.c_str());
+        messageBodyBuffer.c_str()));
 }
 
 int Printer::eventThreadReplyReceived(
@@ -63,11 +73,11 @@ int Printer::eventThreadReplyReceived(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string replyBodyBuffer = makeCString(replyBody);
 
-    return client_event_thread_reply_received(
+    return normalizeLibCallResult(client_event_thread_reply_received(
         teamUuidBuffer.c_str(),
         threadUuidBuffer.c_str(),
         userUuidBuffer.c_str(),
-        replyBodyBuffer.c_str());
+        replyBodyBuffer.c_str()));
 }
 
 int Printer::eventTeamCreated(
@@ -79,10 +89,10 @@ int Printer::eventTeamCreated(
     const std::string teamNameBuffer = makeCString(teamName);
     const std::string teamDescriptionBuffer = makeCString(teamDescription);
 
-    return client_event_team_created(
+    return normalizeLibCallResult(client_event_team_created(
         teamUuidBuffer.c_str(),
         teamNameBuffer.c_str(),
-        teamDescriptionBuffer.c_str());
+        teamDescriptionBuffer.c_str()));
 }
 
 int Printer::eventChannelCreated(
@@ -94,10 +104,10 @@ int Printer::eventChannelCreated(
     const std::string channelNameBuffer = makeCString(channelName);
     const std::string channelDescriptionBuffer = makeCString(channelDescription);
 
-    return client_event_channel_created(
+    return normalizeLibCallResult(client_event_channel_created(
         channelUuidBuffer.c_str(),
         channelNameBuffer.c_str(),
-        channelDescriptionBuffer.c_str());
+        channelDescriptionBuffer.c_str()));
 }
 
 int Printer::eventThreadCreated(
@@ -112,12 +122,12 @@ int Printer::eventThreadCreated(
     const std::string threadTitleBuffer = makeCString(threadTitle);
     const std::string threadBodyBuffer = makeCString(threadBody);
 
-    return client_event_thread_created(
+    return normalizeLibCallResult(client_event_thread_created(
         threadUuidBuffer.c_str(),
         userUuidBuffer.c_str(),
         threadTimestamp,
         threadTitleBuffer.c_str(),
-        threadBodyBuffer.c_str());
+        threadBodyBuffer.c_str()));
 }
 
 int Printer::printUsers(
@@ -128,10 +138,10 @@ int Printer::printUsers(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string userNameBuffer = makeCString(userName);
 
-    return client_print_users(
+    return normalizeLibCallResult(client_print_users(
         userUuidBuffer.c_str(),
         userNameBuffer.c_str(),
-        userStatus);
+        userStatus));
 }
 
 int Printer::printTeams(
@@ -143,10 +153,10 @@ int Printer::printTeams(
     const std::string teamNameBuffer = makeCString(teamName);
     const std::string teamDescriptionBuffer = makeCString(teamDescription);
 
-    return client_print_teams(
+    return normalizeLibCallResult(client_print_teams(
         teamUuidBuffer.c_str(),
         teamNameBuffer.c_str(),
-        teamDescriptionBuffer.c_str());
+        teamDescriptionBuffer.c_str()));
 }
 
 int Printer::printTeamChannels(
@@ -158,10 +168,10 @@ int Printer::printTeamChannels(
     const std::string channelNameBuffer = makeCString(channelName);
     const std::string channelDescriptionBuffer = makeCString(channelDescription);
 
-    return client_team_print_channels(
+    return normalizeLibCallResult(client_team_print_channels(
         channelUuidBuffer.c_str(),
         channelNameBuffer.c_str(),
-        channelDescriptionBuffer.c_str());
+        channelDescriptionBuffer.c_str()));
 }
 
 int Printer::printChannelThreads(
@@ -176,12 +186,12 @@ int Printer::printChannelThreads(
     const std::string threadTitleBuffer = makeCString(threadTitle);
     const std::string threadBodyBuffer = makeCString(threadBody);
 
-    return client_channel_print_threads(
+    return normalizeLibCallResult(client_channel_print_threads(
         threadUuidBuffer.c_str(),
         userUuidBuffer.c_str(),
         threadTimestamp,
         threadTitleBuffer.c_str(),
-        threadBodyBuffer.c_str());
+        threadBodyBuffer.c_str()));
 }
 
 int Printer::printThreadReplies(
@@ -194,11 +204,11 @@ int Printer::printThreadReplies(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string replyBodyBuffer = makeCString(replyBody);
 
-    return client_thread_print_replies(
+    return normalizeLibCallResult(client_thread_print_replies(
         threadUuidBuffer.c_str(),
         userUuidBuffer.c_str(),
         replyTimestamp,
-        replyBodyBuffer.c_str());
+        replyBodyBuffer.c_str()));
 }
 
 int Printer::printPrivateMessages(
@@ -209,10 +219,10 @@ int Printer::printPrivateMessages(
     const std::string senderUuidBuffer = makeCString(senderUuid);
     const std::string messageBodyBuffer = makeCString(messageBody);
 
-    return client_private_message_print_messages(
+    return normalizeLibCallResult(client_private_message_print_messages(
         senderUuidBuffer.c_str(),
         messageTimestamp,
-        messageBodyBuffer.c_str());
+        messageBodyBuffer.c_str()));
 }
 
 int Printer::printUser(
@@ -223,10 +233,10 @@ int Printer::printUser(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string userNameBuffer = makeCString(userName);
 
-    return client_print_user(
+    return normalizeLibCallResult(client_print_user(
         userUuidBuffer.c_str(),
         userNameBuffer.c_str(),
-        userStatus);
+        userStatus));
 }
 
 int Printer::printTeam(
@@ -238,10 +248,10 @@ int Printer::printTeam(
     const std::string teamNameBuffer = makeCString(teamName);
     const std::string teamDescriptionBuffer = makeCString(teamDescription);
 
-    return client_print_team(
+    return normalizeLibCallResult(client_print_team(
         teamUuidBuffer.c_str(),
         teamNameBuffer.c_str(),
-        teamDescriptionBuffer.c_str());
+        teamDescriptionBuffer.c_str()));
 }
 
 int Printer::printChannel(
@@ -253,10 +263,10 @@ int Printer::printChannel(
     const std::string channelNameBuffer = makeCString(channelName);
     const std::string channelDescriptionBuffer = makeCString(channelDescription);
 
-    return client_print_channel(
+    return normalizeLibCallResult(client_print_channel(
         channelUuidBuffer.c_str(),
         channelNameBuffer.c_str(),
-        channelDescriptionBuffer.c_str());
+        channelDescriptionBuffer.c_str()));
 }
 
 int Printer::printThread(
@@ -271,12 +281,12 @@ int Printer::printThread(
     const std::string threadTitleBuffer = makeCString(threadTitle);
     const std::string threadBodyBuffer = makeCString(threadBody);
 
-    return client_print_thread(
+    return normalizeLibCallResult(client_print_thread(
         threadUuidBuffer.c_str(),
         userUuidBuffer.c_str(),
         threadTimestamp,
         threadTitleBuffer.c_str(),
-        threadBodyBuffer.c_str());
+        threadBodyBuffer.c_str()));
 }
 
 int Printer::printTeamCreated(
@@ -288,10 +298,10 @@ int Printer::printTeamCreated(
     const std::string teamNameBuffer = makeCString(teamName);
     const std::string teamDescriptionBuffer = makeCString(teamDescription);
 
-    return client_print_team_created(
+    return normalizeLibCallResult(client_print_team_created(
         teamUuidBuffer.c_str(),
         teamNameBuffer.c_str(),
-        teamDescriptionBuffer.c_str());
+        teamDescriptionBuffer.c_str()));
 }
 
 int Printer::printChannelCreated(
@@ -303,10 +313,10 @@ int Printer::printChannelCreated(
     const std::string channelNameBuffer = makeCString(channelName);
     const std::string channelDescriptionBuffer = makeCString(channelDescription);
 
-    return client_print_channel_created(
+    return normalizeLibCallResult(client_print_channel_created(
         channelUuidBuffer.c_str(),
         channelNameBuffer.c_str(),
-        channelDescriptionBuffer.c_str());
+        channelDescriptionBuffer.c_str()));
 }
 
 int Printer::printThreadCreated(
@@ -321,12 +331,12 @@ int Printer::printThreadCreated(
     const std::string threadTitleBuffer = makeCString(threadTitle);
     const std::string threadBodyBuffer = makeCString(threadBody);
 
-    return client_print_thread_created(
+    return normalizeLibCallResult(client_print_thread_created(
         threadUuidBuffer.c_str(),
         userUuidBuffer.c_str(),
         threadTimestamp,
         threadTitleBuffer.c_str(),
-        threadBodyBuffer.c_str());
+        threadBodyBuffer.c_str()));
 }
 
 int Printer::printReplyCreated(
@@ -339,11 +349,11 @@ int Printer::printReplyCreated(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string replyBodyBuffer = makeCString(replyBody);
 
-    return client_print_reply_created(
+    return normalizeLibCallResult(client_print_reply_created(
         threadUuidBuffer.c_str(),
         userUuidBuffer.c_str(),
         replyTimestamp,
-        replyBodyBuffer.c_str());
+        replyBodyBuffer.c_str()));
 }
 
 int Printer::printSubscribed(
@@ -353,9 +363,9 @@ int Printer::printSubscribed(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string teamUuidBuffer = makeCString(teamUuid);
 
-    return client_print_subscribed(
+    return normalizeLibCallResult(client_print_subscribed(
         userUuidBuffer.c_str(),
-        teamUuidBuffer.c_str());
+        teamUuidBuffer.c_str()));
 }
 
 int Printer::printUnsubscribed(
@@ -365,45 +375,45 @@ int Printer::printUnsubscribed(
     const std::string userUuidBuffer = makeCString(userUuid);
     const std::string teamUuidBuffer = makeCString(teamUuid);
 
-    return client_print_unsubscribed(
+    return normalizeLibCallResult(client_print_unsubscribed(
         userUuidBuffer.c_str(),
-        teamUuidBuffer.c_str());
+        teamUuidBuffer.c_str()));
 }
 
 int Printer::errorUnknownTeam(const std::string_view teamUuid)
 {
     const std::string teamUuidBuffer = makeCString(teamUuid);
 
-    return client_error_unknown_team(teamUuidBuffer.c_str());
+    return normalizeLibCallResult(client_error_unknown_team(teamUuidBuffer.c_str()));
 }
 
 int Printer::errorUnknownChannel(const std::string_view channelUuid)
 {
     const std::string channelUuidBuffer = makeCString(channelUuid);
 
-    return client_error_unknown_channel(channelUuidBuffer.c_str());
+    return normalizeLibCallResult(client_error_unknown_channel(channelUuidBuffer.c_str()));
 }
 
 int Printer::errorUnknownThread(const std::string_view threadUuid)
 {
     const std::string threadUuidBuffer = makeCString(threadUuid);
 
-    return client_error_unknown_thread(threadUuidBuffer.c_str());
+    return normalizeLibCallResult(client_error_unknown_thread(threadUuidBuffer.c_str()));
 }
 
 int Printer::errorUnknownUser(const std::string_view userUuid)
 {
     const std::string userUuidBuffer = makeCString(userUuid);
 
-    return client_error_unknown_user(userUuidBuffer.c_str());
+    return normalizeLibCallResult(client_error_unknown_user(userUuidBuffer.c_str()));
 }
 
 int Printer::errorUnauthorized()
 {
-    return client_error_unauthorized();
+    return normalizeLibCallResult(client_error_unauthorized());
 }
 
 int Printer::errorAlreadyExist()
 {
-    return client_error_already_exist();
+    return normalizeLibCallResult(client_error_already_exist());
 }

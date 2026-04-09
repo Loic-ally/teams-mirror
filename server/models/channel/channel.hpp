@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstring>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "common/limits.hpp"
@@ -16,24 +18,24 @@ namespace myteams
     public:
         Channel() = default;
 
-        Channel(const char *uuid, const char *name, const char *description)
+        Channel(const std::string &uuid, const std::string &name, const std::string &description)
         {
             copy_buffer(uuid_, uuid);
             copy_buffer(name_, name);
             copy_buffer(description_, description);
         }
 
-        const char *getUuid() const noexcept
+        const std::string_view getUuid() const noexcept
         {
             return uuid_;
         }
 
-        const char *getName() const noexcept
+        const std::string_view getName() const noexcept
         {
             return name_;
         }
 
-        const char *getDescription() const noexcept
+        const std::string_view getDescription() const noexcept
         {
             return description_;
         }
@@ -43,17 +45,17 @@ namespace myteams
             return threads_;
         }
 
-        void setUuid(const char *uuid) noexcept
+        void setUuid(const std::string &uuid) noexcept
         {
             copy_buffer(uuid_, uuid);
         }
 
-        void setName(const char *name) noexcept
+        void setName(const std::string &name) noexcept
         {
             copy_buffer(name_, name);
         }
 
-        void setDescription(const char *description) noexcept
+        void setDescription(const std::string &description) noexcept
         {
             copy_buffer(description_, description);
         }
@@ -65,14 +67,11 @@ namespace myteams
 
     private:
         template <std::size_t N>
-        static void copy_buffer(char (&destination)[N], const char *source) noexcept
+        static void copy_buffer(char (&destination)[N], const std::string &source) noexcept
         {
-            if (source == nullptr) {
-                destination[0] = '\0';
-                return;
-            }
-            std::strncpy(destination, source, N - 1);
-            destination[N - 1] = '\0';
+            const std::size_t copiedLength = source.size() < (N - 1) ? source.size() : (N - 1);
+            std::memcpy(destination, source.data(), copiedLength);
+            destination[copiedLength] = '\0';
         }
 
         char uuid_[UUID_LENGTH] {};
