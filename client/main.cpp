@@ -6,6 +6,7 @@
 #include <iostream>
 #include <memory>
 #include <netinet/in.h>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include "core/client.hpp"
@@ -33,8 +34,10 @@ std::int32_t runLoop(std::unique_ptr<utils::Socket> socket) {
         client::ParsedInput input;
         try {
             client::commands::dispatchCommand(clientData, input);
+        } catch (const std::exception &exception) {
+            std::cerr << "Command error: " << exception.what() << std::endl;
         } catch (...) {
-            return 84;
+            std::cerr << "Command error: unknown error" << std::endl;
         }
     }
     return 0;

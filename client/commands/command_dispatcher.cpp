@@ -2,12 +2,14 @@
 #include "help_command.hpp"
 #include "login_command.hpp"
 #include "logout_command.hpp"
+#include "user_command.hpp"
+#include "users_command.hpp"
 #include "core/client.hpp"
 #include "parser/parser.hpp"
 
 #include <array>
 #include <algorithm>
-#include <iostream>
+#include <stdexcept>
 #include <string>
 
 namespace client::commands {
@@ -21,10 +23,12 @@ struct CommandEntry {
     CommandHandler handler;
 };
 
-constexpr std::array<CommandEntry, 3> COMMAND_TABLE {{
+constexpr std::array<CommandEntry, 5> COMMAND_TABLE {{
     {"/help", &handleHelp},
     {"/login", &handleLogin},
-    {"/logout", &handleLogout}
+    {"/logout", &handleLogout},
+    {"/users", &handleUsers},
+    {"/user", &handleUser}
 }};
 
 } // namespace
@@ -46,7 +50,7 @@ void dispatchCommand(Client &clientData, ParsedInput &input)
         entryIt->handler(clientData, input);
         return;
     }
-    std::cout << "Unknown command: " << command << ". Use /help." << std::endl;
+    throw std::invalid_argument("Unknown command: " + command + ". Use /help.");
 }
 
 }

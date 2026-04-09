@@ -1,4 +1,4 @@
-#include "logout_command.hpp"
+#include "users_command.hpp"
 #include "packet_utils.hpp"
 #include "common/protocol.hpp"
 #include "core/client.hpp"
@@ -74,37 +74,52 @@ ReceivedPacket readReplySkippingEvents(const utils::Socket &socket)
     }
 }
 
+void printUsersList(const std::string &payload)
+{
+    if (payload.size() % sizeof(myteams::PayloadRplUser) != 0) {
+        throw std::runtime_error("invalid RPL_USERS_LIST payload size");
+    }
+    const std::size_t userCount = payload.size() / sizeof(myteams::PayloadRplUser);
+    for (std::size_t index = 0; index < userCount; ++index) {
+        myteams::PayloadRplUser userPayload {};
+        std::memcpy(
+            &userPayload,
+            payload.data() + (index * sizeof(myteams::PayloadRplUser)),
+            sizeof(userPayload));
+        (void)Printer::printUsers(
+            userPayload.user_uuid,
+            userPayload.user_name,
+            static_cast<int>(userPayload.user_status));
+    }
+}
+
 } // namespace
 
-void handleLogout(Client &clientData, ParsedInput &input)
+void handleUsers(Client &clientData, ParsedInput &input)
 {
     if (input.hasRemainingArgs()) {
-        throw std::invalid_argument("Usage: /logout");
+        throw std::invalid_argument("Usage: /users");
     }
-    if (!clientData.connected) {
-        (void)Printer::errorUnauthorized();
-        throw std::runtime_error("Unauthorized: you must be logged in to use /logout");
-    }
-
-    const std::string previousUsername = clientData.username;
-    const std::string packet = buildPacket(myteams::CMD_LOGOUT);
+    const std::string packet = buildPacket(myteams::CMD_USERS);
     sendPacket(*clientData.socket, packet);
-
-    const ReceivedPacket reply = readReplySkippingEvents(*clientData.socket);
-    if (reply.header.code == myteams::RPL_OK) {
-        clientData.connected = false;
-        clientData.username.clear();
-        (void)Printer::eventLoggedOut("", previousUsername);
-        return;
+    for (;;) {
+        const ReceivedPacket reply = readReplySkippingEvents(*clientData.socket);
+        if (reply.header.code == myteams::RPL_OK) {
+            continue;
+        }
+        if (reply.header.code == myteams::RPL_USERS_LIST) {
+            printUsersList(reply.payload);
+            return;
+        }
+        if (reply.header.code == myteams::ERR_UNAUTHORIZED) {
+            (void)Printer::errorUnauthorized();
+            throw std::runtime_error("Unauthorized: you must be logged in to use /users");
+        }
+        if (reply.header.code == myteams::ERR_BAD_REQUEST) {
+            throw std::runtime_error("Server rejected /users request (bad request)");
+        }
+        throw std::runtime_error("unexpected reply code for /users");
     }
-    if (reply.header.code == myteams::ERR_UNAUTHORIZED) {
-        (void)Printer::errorUnauthorized();
-        throw std::runtime_error("Unauthorized: you must be logged in to use /logout");
-    }
-    if (reply.header.code == myteams::ERR_BAD_REQUEST) {
-        throw std::runtime_error("Server rejected /logout request (bad request)");
-    }
-    throw std::runtime_error("unexpected reply code for /logout");
 }
 
-}
+} // namespace client::commands

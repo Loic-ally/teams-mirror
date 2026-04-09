@@ -3,6 +3,8 @@
 #include "server/commands/help_command.hpp"
 #include "server/commands/login_command.hpp"
 #include "server/commands/logout_command.hpp"
+#include "server/commands/user_command.hpp"
+#include "server/commands/users_command.hpp"
 #include "server/core/client_manager/client_manager.hpp"
 
 #include <algorithm>
@@ -19,9 +21,11 @@ struct CommandHandlerEntry {
     CommandHandler handler;
 };
 
-constexpr std::array<CommandHandlerEntry, 3> COMMAND_HANDLERS {{
+constexpr std::array<CommandHandlerEntry, 5> COMMAND_HANDLERS {{
     {myteams::CMD_LOGIN, &handleLoginCommand},
     {myteams::CMD_LOGOUT, &handleLogoutCommand},
+    {myteams::CMD_USERS, &handleUsersCommand},
+    {myteams::CMD_USER_INFO, &handleUserCommand},
     {myteams::CMD_INFO, &handleHelpCommand}
 }};
 
