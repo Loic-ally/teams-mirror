@@ -1,16 +1,16 @@
 
 #include "Socket.hpp"
+#include "commands/command_dispatcher.hpp"
 #include <cstdint>
 #include <exception>
 #include <iostream>
 #include <memory>
 #include <netinet/in.h>
-#include <span>
 #include <string>
 #include <string_view>
+#include "core/client.hpp"
 #include "parser/parser.hpp"
 #include <utility>
-#include "core/client.hpp"
 
 std::unique_ptr<utils::Socket> createSocket(std::string adress,
                                             std::string port) {
@@ -25,14 +25,6 @@ std::unique_ptr<utils::Socket> createSocket(std::string adress,
   return socket;
 }
 
-void handleInput(client::Client &clientData, client::ParsedInput &input) {
-    std::cout << input.getCommand() << " | ";
-    while (!input.fail()) {
-        std::cout << input.getArg<std::string>() << " | ";
-    }
-    std::cout << "fail here" << std::endl;
-}
-
 std::int32_t runLoop(std::unique_ptr<utils::Socket> socket) {
     client::Client clientData;
 
@@ -40,7 +32,7 @@ std::int32_t runLoop(std::unique_ptr<utils::Socket> socket) {
     while (clientData.running) {
         client::ParsedInput input;
         try {
-            handleInput(clientData, input);
+            client::commands::dispatchCommand(clientData, input);
         } catch (...) {
             return 84;
         }

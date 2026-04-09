@@ -56,6 +56,20 @@ ClientManager::clearIncomingBuffer(std::int32_t socketFd) noexcept
 }
 
 void
+ClientManager::consumeIncomingBuffer(std::int32_t socketFd, std::size_t consumedBytes) noexcept
+{
+	auto it = _clients.find(socketFd);
+	if (it == _clients.end())
+		return;
+	std::string &incomingBuffer = it->second.incomingBuffer;
+	if (consumedBytes >= incomingBuffer.size()) {
+		incomingBuffer.clear();
+		return;
+	}
+	incomingBuffer.erase(0, consumedBytes);
+}
+
+void
 ClientManager::queueDataToSend(std::int32_t socketFd, const char *data, std::size_t size)
 {
 	auto it = _clients.find(socketFd);
