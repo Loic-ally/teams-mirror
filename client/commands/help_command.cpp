@@ -17,6 +17,8 @@ void handleHelp(Client &clientData, ParsedInput &input)
         << "/help: display this help\n"
         << "/login \"user_name\": log in with a username\n"
         << "/logout: log out from the current session\n"
+        << "/send \"user_uuid\" \"message_body\": send a private message to a user\n"
+        << "/messages \"user_uuid\": list private messages with a user\n"
         << "/users: list all users\n"
         << "/user \"user_uuid\": display information about one user"
         << std::endl;
