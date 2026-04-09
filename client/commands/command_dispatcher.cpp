@@ -5,10 +5,29 @@
 #include "core/client.hpp"
 #include "parser/parser.hpp"
 
+#include <array>
+#include <algorithm>
 #include <iostream>
 #include <string>
 
 namespace client::commands {
+
+namespace {
+
+using CommandHandler = void (*)(Client &, ParsedInput &);
+
+struct CommandEntry {
+    const char *name;
+    CommandHandler handler;
+};
+
+constexpr std::array<CommandEntry, 3> COMMAND_TABLE {{
+    {"/help", &handleHelp},
+    {"/login", &handleLogin},
+    {"/logout", &handleLogout}
+}};
+
+} // namespace
 
 void dispatchCommand(Client &clientData, ParsedInput &input)
 {
@@ -17,16 +36,14 @@ void dispatchCommand(Client &clientData, ParsedInput &input)
     if (command.empty()) {
         return;
     }
-	if (command == "/help") {
-		handleHelp(clientData, input);
-		return;
-	}
-    if (command == "/login") {
-        handleLogin(clientData, input);
-        return;
-    }
-    if (command == "/logout") {
-        handleLogout(clientData, input);
+
+    const auto entryIt = std::find_if(
+        COMMAND_TABLE.begin(),
+        COMMAND_TABLE.end(),
+        [&command](const CommandEntry &entry) { return command == entry.name; });
+
+    if (entryIt != COMMAND_TABLE.end()) {
+        entryIt->handler(clientData, input);
         return;
     }
     std::cout << "Unknown command: " << command << ". Use /help." << std::endl;

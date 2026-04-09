@@ -1,0 +1,131 @@
+#include "server/commands/command_utils.hpp"
+#include "server/core/client_manager/client_manager.hpp"
+
+#include <algorithm>
+#include <cstring>
+#include <random>
+
+namespace server::commands {
+
+void copyPaddedString(char *destination, const std::size_t size, const std::string_view source)
+{
+    if (destination == nullptr || size == 0) {
+        return;
+    }
+    const std::size_t copiedLength = source.size() < (size - 1) ? source.size() : (size - 1);
+    std::memcpy(destination, source.data(), copiedLength);
+    destination[copiedLength] = '\0';
+}
+
+std::string buildPacket(const std::uint16_t code, const void *payload, const std::uint16_t payloadSize)
+{
+    const myteams::PacketHeader header {code, payloadSize};
+    std::string packet(sizeof(header) + payloadSize, '\0');
+
+    std::memcpy(packet.data(), &header, sizeof(header));
+    if (payload != nullptr && payloadSize > 0) {
+        std::memcpy(packet.data() + sizeof(header), payload, payloadSize);
+    }
+    return packet;
+}
+
+void queuePacket(ClientManager &clientManager, const std::int32_t clientFd, const std::string &packet)
+{
+    clientManager.queueDataToSend(clientFd, packet.data(), packet.size());
+}
+
+void queueStatus(ClientManager &clientManager, const std::int32_t clientFd, const myteams::StatusCode status)
+{
+    queuePacket(clientManager, clientFd, buildPacket(static_cast<std::uint16_t>(status)));
+}
+
+void queueStatus(CommandContext &context, const myteams::StatusCode status)
+{
+    queueStatus(context.clientManager, context.clientFd, status);
+}
+
+void broadcastPacket(
+    ClientManager &clientManager,
+    const ClientSockets &clientSockets,
+    const std::string &packet,
+    const std::int32_t excludedClientFd)
+{
+    for (const auto &[socketFd, socket] : clientSockets) {
+        (void)socket;
+        if (socketFd == excludedClientFd) {
+            continue;
+        }
+        clientManager.queueDataToSend(socketFd, packet.data(), packet.size());
+    }
+}
+
+void broadcastPacket(CommandContext &context, const std::string &packet, const std::int32_t excludedClientFd)
+{
+    broadcastPacket(context.clientManager, context.clientSockets, packet, excludedClientFd);
+}
+
+std::string generateUuid()
+{
+    static thread_local std::mt19937 randomEngine(std::random_device {}());
+    static constexpr char HEX_DIGITS[] = "0123456789abcdef";
+    static constexpr std::size_t UUID_CHAR_COUNT = 36;
+    std::string uuid(UUID_CHAR_COUNT, '\0');
+    std::uniform_int_distribution<int> distribution(0, 15);
+
+    for (std::size_t index = 0; index < UUID_CHAR_COUNT; ++index) {
+        if (index == 8 || index == 13 || index == 18 || index == 23) {
+            uuid[index] = '-';
+            continue;
+        }
+        uuid[index] = HEX_DIGITS[distribution(randomEngine)];
+    }
+    return uuid;
+}
+
+myteams::User *findUserByName(std::vector<myteams::User> &users, const std::string_view userName)
+{
+    const auto it = std::find_if(users.begin(), users.end(),
+        [userName](const myteams::User &user) { return user.getName() == userName; });
+    if (it == users.end()) {
+        return nullptr;
+    }
+    return &(*it);
+}
+
+myteams::User *findUserByUuid(std::vector<myteams::User> &users, const std::string_view userUuid)
+{
+    const auto it = std::find_if(users.begin(), users.end(),
+        [userUuid](const myteams::User &user) { return user.getUuid() == userUuid; });
+    if (it == users.end()) {
+        return nullptr;
+    }
+    return &(*it);
+}
+
+bool extractFixedString(const char *rawData, const std::size_t rawSize, std::string &outString)
+{
+    if (rawData == nullptr || rawSize == 0) {
+        return false;
+    }
+    const void *nullTerminator = std::memchr(rawData, '\0', rawSize);
+    if (nullTerminator == nullptr) {
+        return false;
+    }
+    const auto *end = static_cast<const char *>(nullTerminator);
+    outString.assign(rawData, static_cast<std::size_t>(end - rawData));
+    return true;
+}
+
+std::string buildUserConnectionEventPacket(
+    const myteams::StatusCode eventCode,
+    const std::string_view userUuid,
+    const std::string_view userName)
+{
+    myteams::PayloadEvtUserConnection payload {};
+    copyPaddedString(payload.user_uuid, sizeof(payload.user_uuid), userUuid);
+    copyPaddedString(payload.user_name, sizeof(payload.user_name), userName);
+    return buildPacket(static_cast<std::uint16_t>(eventCode), &payload, sizeof(payload));
+}
+
+} // namespace server::commands
+
