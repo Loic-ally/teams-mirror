@@ -9,3 +9,4 @@ tmp
 .idea/
 build/
 server_data/
+tests/

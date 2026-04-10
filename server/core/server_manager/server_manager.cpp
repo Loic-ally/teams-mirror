@@ -24,13 +24,11 @@ extern "C" {
 
 namespace server {
 
-namespace {
-
 using PollFdList = std::vector<struct pollfd>;
 using ClientSocketMap = commands::ClientSockets;
 using AuthenticatedUserByFd = commands::AuthenticatedUserByFd;
 
-std::unique_ptr<utils::Socket>
+static std::unique_ptr<utils::Socket>
 acceptClientSocket(const utils::Socket &listenSocket)
 {
     try {
@@ -41,7 +39,7 @@ acceptClientSocket(const utils::Socket &listenSocket)
     }
 }
 
-void
+static void
 appendClientPollFd(PollFdList &pollFds, const std::int32_t clientFd)
 {
     struct pollfd clientPollFd {};
@@ -50,7 +48,7 @@ appendClientPollFd(PollFdList &pollFds, const std::int32_t clientFd)
     pollFds.push_back(clientPollFd);
 }
 
-bool
+static bool
 handleReadableEvent(ClientManager &clientManager, const std::int32_t clientFd)
 {
     try {
@@ -60,7 +58,7 @@ handleReadableEvent(ClientManager &clientManager, const std::int32_t clientFd)
     }
 }
 
-bool
+static bool
 handleWritableEvent(ClientManager &clientManager, const std::int32_t clientFd)
 {
     if (!clientManager.hasPendingWrite(clientFd)) {
@@ -73,12 +71,13 @@ handleWritableEvent(ClientManager &clientManager, const std::int32_t clientFd)
     }
 }
 
-bool
+static bool
 shouldKeepClientConnected(
     ClientManager &clientManager,
     const std::int32_t clientFd,
     const short clientEvents,
     std::vector<myteams::User> &users,
+    std::vector<myteams::Team> &teams,
     const ClientSocketMap &clientSockets,
     AuthenticatedUserByFd &authenticatedUsersByFd)
 {
@@ -93,6 +92,7 @@ shouldKeepClientConnected(
             clientManager,
             clientFd,
             users,
+            teams,
             clientSockets,
             authenticatedUsersByFd);
     }
@@ -102,7 +102,7 @@ shouldKeepClientConnected(
     return true;
 }
 
-void
+static void
 refreshClientPollInterest(
     struct pollfd &clientPollFd,
     const ClientManager &clientManager,
@@ -114,7 +114,7 @@ refreshClientPollInterest(
     clientPollFd.revents = 0;
 }
 
-void
+static void
 removeClientAt(
     PollFdList &pollFds,
     const std::size_t index,
@@ -135,8 +135,6 @@ removeClientAt(
     pollFds.erase(pollFds.begin()
         + static_cast<std::vector<struct pollfd>::difference_type>(index));
 }
-
-} // namespace
 
 std::atomic<bool> ServerManager::_isRunning {true};
 
@@ -235,7 +233,10 @@ ServerManager::runPollLoop()
         throw SocketNotInitializedException();
     }
     database::DatabaseLoader databaseLoader;
-    (void)databaseLoader.load(_users, _teams);
+    const bool hasLoadedData = databaseLoader.load(_users, _teams);
+    if (!hasLoadedData) {
+        std::cout << "Server started with empty persisted state." << std::endl;
+    }
     installSignalHandler();
     _isRunning.store(true);
     PollFdList pollFds;
@@ -245,7 +246,7 @@ ServerManager::runPollLoop()
 
     for (myteams::User &user : _users) {
         user.setLoggedIn(false);
-        (void)ServerLogger::logUserLoaded(user.getUuid(), user.getName());
+        ServerLogger::logUserLoaded(user.getUuid(), user.getName());
     }
 
     const std::int32_t listenFd = _listenSocket->getFd();
@@ -254,7 +255,10 @@ ServerManager::runPollLoop()
     listenPollFd.events = POLLIN;
     pollFds.push_back(listenPollFd);
     while (_isRunning.load()) {
-        (void)pollSockets(pollFds, -1);
+        const std::int32_t readyCount = pollSockets(pollFds, -1);
+        if (readyCount == 0) {
+            continue;
+        }
         if (!_isRunning.load()) {
             break;
         }
@@ -283,6 +287,7 @@ ServerManager::runPollLoop()
                 currentFd,
                 currentEvents,
                 _users,
+                _teams,
                 clientSockets,
                 authenticatedUsersByFd)) {
                 refreshClientPollInterest(currentPollFd, clientManager, currentFd);

@@ -1,4 +1,9 @@
+#ifndef SERVER_MODELS_USER_USER_HPP
+#define SERVER_MODELS_USER_USER_HPP
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include <cstring>
 #include <string>
@@ -67,3 +72,5 @@ namespace myteams
         bool is_logged_in_ = false;
     };
 } // namespace myteams
+
+#endif // SERVER_MODELS_USER_USER_HPP

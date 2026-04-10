@@ -1,6 +1,12 @@
+#ifndef SERVER_MODELS_TEAM_TEAM_HPP
+#define SERVER_MODELS_TEAM_TEAM_HPP
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include <array>
+#include <algorithm>
 #include <cstring>
 #include <string>
 #include <string_view>
@@ -54,6 +60,11 @@ namespace myteams
             return channels_;
         }
 
+        std::vector<Channel> &getChannels() noexcept
+        {
+            return channels_;
+        }
+
         void setUuid(const std::string &uuid) noexcept
         {
             copy_buffer(uuid_, uuid);
@@ -72,6 +83,29 @@ namespace myteams
         void addSubscribedUser(const std::string &user_uuid)
         {
             subscribed_user_uuids_.push_back(make_uuid(user_uuid));
+        }
+
+        bool isUserSubscribed(const std::string_view userUuid) const noexcept
+        {
+            const auto it = std::find_if(
+                subscribed_user_uuids_.begin(),
+                subscribed_user_uuids_.end(),
+                [userUuid](const UserUuid &storedUuid) { return std::string_view(storedUuid.data()) == userUuid; });
+            return it != subscribed_user_uuids_.end();
+        }
+
+        bool removeSubscribedUser(const std::string_view userUuid)
+        {
+            const auto previousSize = subscribed_user_uuids_.size();
+            subscribed_user_uuids_.erase(
+                std::remove_if(
+                    subscribed_user_uuids_.begin(),
+                    subscribed_user_uuids_.end(),
+                    [userUuid](const UserUuid &storedUuid) {
+                        return std::string_view(storedUuid.data()) == userUuid;
+                    }),
+                subscribed_user_uuids_.end());
+            return subscribed_user_uuids_.size() != previousSize;
         }
 
         void addChannel(const Channel &channel)
@@ -104,3 +138,5 @@ namespace myteams
         std::vector<Channel> channels_ {};
     };
 } // namespace myteams
+
+#endif // SERVER_MODELS_TEAM_TEAM_HPP

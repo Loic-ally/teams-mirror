@@ -5,6 +5,7 @@
 #include "display/printer.hpp"
 #include "parser/parser.hpp"
 
+#include <cstdint>
 #include <iostream>
 #include <string>
 
@@ -17,7 +18,7 @@ void handleLogout(Client &clientData, ParsedInput &input)
         return;
     }
     if (!clientData.connected) {
-        (void)Printer::errorUnauthorized();
+        Printer::errorUnauthorized();
         return;
     }
 
@@ -25,9 +26,28 @@ void handleLogout(Client &clientData, ParsedInput &input)
     const std::string packet = buildPacket(myteams::CMD_LOGOUT);
     sendPacket(*clientData.socket, packet);
 
-    clientData.connected = false;
-    clientData.username.clear();
-    (void)Printer::eventLoggedOut("", previousUsername);
+    myteams::PacketHeader responseHeader {};
+    std::string responsePayload;
+    readServerReply(*clientData.socket, responseHeader, responsePayload);
+
+    if (responseHeader.code == myteams::RPL_OK) {
+        clientData.connected = false;
+        clientData.username.clear();
+        clientData.contextTeamUuid.clear();
+        clientData.contextChannelUuid.clear();
+        clientData.contextThreadUuid.clear();
+        Printer::eventLoggedOut("", previousUsername);
+        return;
+    }
+    if (responseHeader.code == myteams::ERR_UNAUTHORIZED) {
+        Printer::errorUnauthorized();
+        return;
+    }
+    if (responseHeader.code == myteams::ERR_BAD_REQUEST) {
+        std::cout << "Invalid logout request." << std::endl;
+        return;
+    }
+    std::cout << "Server returned unexpected status: " << responseHeader.code << std::endl;
 }
 
 }

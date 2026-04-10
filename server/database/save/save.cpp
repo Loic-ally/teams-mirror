@@ -10,9 +10,9 @@
 #include <system_error>
 #include <vector>
 
-namespace {
+using server::database::detail::SerializedLines;
 
-std::string
+static std::string
 escapeField(std::string_view value, char delimiter)
 {
 	std::string escaped;
@@ -36,7 +36,7 @@ escapeField(std::string_view value, char delimiter)
 	return escaped;
 }
 
-std::string
+static std::string
 joinEscapedFields(const std::vector<std::string> &fields, char delimiter)
 {
 	std::string line;
@@ -48,16 +48,7 @@ joinEscapedFields(const std::vector<std::string> &fields, char delimiter)
 	return line;
 }
 
-struct SerializedLines {
-	std::vector<std::string> users;
-	std::vector<std::string> teams;
-	std::vector<std::string> teamSubscriptions;
-	std::vector<std::string> channels;
-	std::vector<std::string> threads;
-	std::vector<std::string> messages;
-};
-
-SerializedLines
+static SerializedLines
 serializeData(const std::vector<myteams::User> &users, const std::vector<myteams::Team> &teams, char delimiter)
 {
 	SerializedLines serialized;
@@ -114,7 +105,7 @@ serializeData(const std::vector<myteams::User> &users, const std::vector<myteams
 	return serialized;
 }
 
-bool
+static bool
 writeLines(const std::filesystem::path &filePath, const std::vector<std::string> &lines)
 {
 	std::ofstream outputFile(filePath, std::ios::out | std::ios::trunc);
@@ -127,7 +118,6 @@ writeLines(const std::filesystem::path &filePath, const std::vector<std::string>
 	return outputFile.good();
 }
 
-} // namespace
 
 namespace server::database {
 

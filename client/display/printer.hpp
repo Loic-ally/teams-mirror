@@ -13,136 +13,134 @@ class Printer {
         Printer() = delete;
         ~Printer() = delete;
 
-        // Asynchronous events received from the server.
-        static int eventLoggedIn(
+        static void eventLoggedIn(
             std::string_view userUuid,
             std::string_view userName);
 
-        static int eventLoggedOut(
+        static void eventLoggedOut(
             std::string_view userUuid,
             std::string_view userName);
 
-        static int eventPrivateMessageReceived(
+        static void eventPrivateMessageReceived(
             std::string_view userUuid,
             std::string_view messageBody);
 
-        static int eventThreadReplyReceived(
+        static void eventThreadReplyReceived(
             std::string_view teamUuid,
             std::string_view threadUuid,
             std::string_view userUuid,
             std::string_view replyBody);
 
-        static int eventTeamCreated(
+        static void eventTeamCreated(
             std::string_view teamUuid,
             std::string_view teamName,
             std::string_view teamDescription);
 
-        static int eventChannelCreated(
+        static void eventChannelCreated(
             std::string_view channelUuid,
             std::string_view channelName,
             std::string_view channelDescription);
 
-        static int eventThreadCreated(
+        static void eventThreadCreated(
             std::string_view threadUuid,
             std::string_view userUuid,
             std::time_t threadTimestamp,
             std::string_view threadTitle,
             std::string_view threadBody);
 
-        // Synchronous responses for lists and entity details.
-        static int printUsers(
+        static void printUsers(
             std::string_view userUuid,
             std::string_view userName,
             int userStatus);
 
-        static int printTeams(
+        static void printTeams(
             std::string_view teamUuid,
             std::string_view teamName,
             std::string_view teamDescription);
 
-        static int printTeamChannels(
+        static void printTeamChannels(
             std::string_view channelUuid,
             std::string_view channelName,
             std::string_view channelDescription);
 
-        static int printChannelThreads(
+        static void printChannelThreads(
             std::string_view threadUuid,
             std::string_view userUuid,
             std::time_t threadTimestamp,
             std::string_view threadTitle,
             std::string_view threadBody);
 
-        static int printThreadReplies(
+        static void printThreadReplies(
             std::string_view threadUuid,
             std::string_view userUuid,
             std::time_t replyTimestamp,
             std::string_view replyBody);
 
-        static int printPrivateMessages(
+        static void printPrivateMessages(
             std::string_view senderUuid,
             std::time_t messageTimestamp,
             std::string_view messageBody);
 
-        static int printUser(
+        static void printUser(
             std::string_view userUuid,
             std::string_view userName,
             int userStatus);
 
-        static int printTeam(
+        static void printTeam(
             std::string_view teamUuid,
             std::string_view teamName,
             std::string_view teamDescription);
 
-        static int printChannel(
+        static void printChannel(
             std::string_view channelUuid,
             std::string_view channelName,
             std::string_view channelDescription);
 
-        static int printThread(
+        static void printThread(
             std::string_view threadUuid,
             std::string_view userUuid,
             std::time_t threadTimestamp,
             std::string_view threadTitle,
             std::string_view threadBody);
 
-        static int printTeamCreated(
+        static void printTeamCreated(
             std::string_view teamUuid,
             std::string_view teamName,
             std::string_view teamDescription);
 
-        static int printChannelCreated(
+        static void printChannelCreated(
             std::string_view channelUuid,
             std::string_view channelName,
             std::string_view channelDescription);
 
-        static int printThreadCreated(
+        static void printThreadCreated(
             std::string_view threadUuid,
             std::string_view userUuid,
             std::time_t threadTimestamp,
             std::string_view threadTitle,
             std::string_view threadBody);
 
-        static int printReplyCreated(
+        static void printReplyCreated(
             std::string_view threadUuid,
             std::string_view userUuid,
             std::time_t replyTimestamp,
             std::string_view replyBody);
 
-        static int printSubscribed(
+        static void printSubscribed(
             std::string_view userUuid,
             std::string_view teamUuid);
 
-        static int printUnsubscribed(
+        static void printUnsubscribed(
             std::string_view userUuid,
             std::string_view teamUuid);
 
         // Error responses.
-        static int errorUnknownTeam(std::string_view teamUuid);
-        static int errorUnknownChannel(std::string_view channelUuid);
-        static int errorUnknownThread(std::string_view threadUuid);
-        static int errorUnknownUser(std::string_view userUuid);
-        static int errorUnauthorized();
-        static int errorAlreadyExist();
+        static void errorUnknownTeam(std::string_view teamUuid);
+        static void errorUnknownChannel(std::string_view channelUuid);
+        static void errorUnknownThread(std::string_view threadUuid);
+        static void errorUnknownUser(std::string_view userUuid);
+        static void errorUnauthorized();
+        static void errorAlreadyExist();
 };
 
 #endif // CLIENT_DISPLAY_PRINTER_HPP

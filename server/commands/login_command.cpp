@@ -17,7 +17,6 @@ void handleLoginCommand(CommandContext &context)
         queueStatus(context, myteams::ERR_ALREADY_EXIST);
         return;
     }
-
     myteams::PayloadReqLogin payload {};
     std::memcpy(&payload, context.payloadData, sizeof(payload));
     std::string requestedUserName;
@@ -26,31 +25,36 @@ void handleLoginCommand(CommandContext &context)
         queueStatus(context, myteams::ERR_BAD_REQUEST);
         return;
     }
+    const auto completeLogin = [&context](myteams::User &user) {
+        context.authenticatedUsersByFd[context.clientFd] = std::string(user.getUuid());
+        ServerLogger::logUserLoggedIn(user.getUuid());
+        queueStatus(context, myteams::RPL_OK);
 
-    myteams::User *user = findUserByName(context.users, requestedUserName);
-    if (user == nullptr) {
+        const std::string eventPacket =
+            buildUserConnectionEventPacket(myteams::EVT_LOGGED_IN, user.getUuid(), user.getName());
+        broadcastPacket(context, eventPacket);
+    };
+
+    const auto existingUser = findUserByName(context.users, requestedUserName);
+    if (!existingUser.has_value()) {
         std::string userUuid = generateUuid();
-        while (findUserByUuid(context.users, userUuid) != nullptr) {
+        while (findUserByUuid(context.users, userUuid).has_value()) {
             userUuid = generateUuid();
         }
         context.users.emplace_back(userUuid, requestedUserName, true);
-        user = &context.users.back();
-        (void)ServerLogger::logUserCreated(user->getUuid(), user->getName());
+        myteams::User &user = context.users.back();
+        ServerLogger::logUserCreated(user.getUuid(), user.getName());
+        completeLogin(user);
+        return;
     } else {
-        if (user->isLoggedIn()) {
+        myteams::User &user = existingUser->get();
+        if (user.isLoggedIn()) {
             queueStatus(context, myteams::ERR_ALREADY_EXIST);
             return;
         }
-        user->setLoggedIn(true);
+        user.setLoggedIn(true);
+        completeLogin(user);
     }
-
-    context.authenticatedUsersByFd[context.clientFd] = std::string(user->getUuid());
-    (void)ServerLogger::logUserLoggedIn(user->getUuid());
-    queueStatus(context, myteams::RPL_OK);
-
-    const std::string eventPacket =
-        buildUserConnectionEventPacket(myteams::EVT_LOGGED_IN, user->getUuid(), user->getName());
-    broadcastPacket(context, eventPacket);
 }
 
 } // namespace server::commands
