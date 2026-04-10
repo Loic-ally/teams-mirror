@@ -20,34 +20,6 @@ enum class CreateTarget {
     Reply
 };
 
-std::string readExact(const utils::Socket &socket, const std::size_t wantedSize)
-{
-    std::string buffer;
-    buffer.reserve(wantedSize);
-
-    while (buffer.size() < wantedSize) {
-        const std::string chunk = socket.read(wantedSize - buffer.size());
-        buffer += chunk;
-    }
-    return buffer;
-}
-
-bool readServerPacket(
-    const utils::Socket &socket,
-    myteams::PacketHeader &outHeader,
-    std::string &outPayload)
-{
-    const std::string headerBuffer = readExact(socket, sizeof(myteams::PacketHeader));
-    std::memcpy(&outHeader, headerBuffer.data(), sizeof(outHeader));
-
-    outPayload.clear();
-    if (outHeader.payload_size == 0) {
-        return true;
-    }
-    outPayload = readExact(socket, outHeader.payload_size);
-    return true;
-}
-
 CreateTarget inferCreateTargetFromContext(const Client &clientData)
 {
     if (clientData.contextTeamUuid.empty()) {
@@ -65,64 +37,6 @@ CreateTarget inferCreateTargetFromContext(const Client &clientData)
 void printUnexpectedPayload(const char *message)
 {
     std::cout << message << std::endl;
-}
-
-void handleEventPacket(const std::uint16_t code, const std::string &payload)
-{
-    if (code == myteams::EVT_TEAM_CREATED) {
-        if (payload.size() != sizeof(myteams::PayloadEvtTeamCreated)) {
-            printUnexpectedPayload("Malformed team event payload received from server.");
-            return;
-        }
-        myteams::PayloadEvtTeamCreated eventPayload {};
-        std::memcpy(&eventPayload, payload.data(), sizeof(eventPayload));
-        (void)Printer::eventTeamCreated(
-            eventPayload.team_uuid,
-            eventPayload.team_name,
-            eventPayload.team_description);
-        return;
-    }
-    if (code == myteams::EVT_CHANNEL_CREATED) {
-        if (payload.size() != sizeof(myteams::PayloadEvtChannelCreated)) {
-            printUnexpectedPayload("Malformed channel event payload received from server.");
-            return;
-        }
-        myteams::PayloadEvtChannelCreated eventPayload {};
-        std::memcpy(&eventPayload, payload.data(), sizeof(eventPayload));
-        (void)Printer::eventChannelCreated(
-            eventPayload.channel_uuid,
-            eventPayload.channel_name,
-            eventPayload.channel_description);
-        return;
-    }
-    if (code == myteams::EVT_THREAD_CREATED) {
-        if (payload.size() != sizeof(myteams::PayloadEvtThreadCreated)) {
-            printUnexpectedPayload("Malformed thread event payload received from server.");
-            return;
-        }
-        myteams::PayloadEvtThreadCreated eventPayload {};
-        std::memcpy(&eventPayload, payload.data(), sizeof(eventPayload));
-        (void)Printer::eventThreadCreated(
-            eventPayload.thread_uuid,
-            eventPayload.user_uuid,
-            static_cast<std::time_t>(eventPayload.thread_timestamp),
-            eventPayload.thread_title,
-            eventPayload.thread_body);
-        return;
-    }
-    if (code == myteams::EVT_REPLY_CREATED) {
-        if (payload.size() != sizeof(myteams::PayloadEvtReplyCreated)) {
-            printUnexpectedPayload("Malformed reply event payload received from server.");
-            return;
-        }
-        myteams::PayloadEvtReplyCreated eventPayload {};
-        std::memcpy(&eventPayload, payload.data(), sizeof(eventPayload));
-        (void)Printer::eventThreadReplyReceived(
-            eventPayload.team_uuid,
-            eventPayload.thread_uuid,
-            eventPayload.user_uuid,
-            eventPayload.reply_body);
-    }
 }
 
 void handleCreatedReply(const CreateTarget target, const std::string &payload)
@@ -241,22 +155,15 @@ void handleCreate(Client &clientData, ParsedInput &input)
         }
     }
 
-    for (;;) {
-        myteams::PacketHeader responseHeader {};
-        std::string responsePayload;
-        (void)readServerPacket(*clientData.socket, responseHeader, responsePayload);
+    myteams::PacketHeader responseHeader {};
+    std::string responsePayload;
+    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
 
-        if (responseHeader.code == myteams::RPL_CREATED) {
-            handleCreatedReply(target, responsePayload);
-            return;
-        }
-        if (responseHeader.code >= myteams::EVT_LOGGED_IN && responseHeader.code <= myteams::EVT_REPLY_CREATED) {
-            handleEventPacket(responseHeader.code, responsePayload);
-            continue;
-        }
-        handleCreateError(responseHeader.code);
+    if (responseHeader.code == myteams::RPL_CREATED) {
+        handleCreatedReply(target, responsePayload);
         return;
     }
+    handleCreateError(responseHeader.code);
 }
 
 } // namespace client::commands

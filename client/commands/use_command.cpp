@@ -31,34 +31,6 @@ bool isUuidFormatValid(const std::string &uuid)
     return true;
 }
 
-std::string readExact(const utils::Socket &socket, const std::size_t wantedSize)
-{
-    std::string buffer;
-    buffer.reserve(wantedSize);
-
-    while (buffer.size() < wantedSize) {
-        const std::string chunk = socket.read(wantedSize - buffer.size());
-        buffer += chunk;
-    }
-    return buffer;
-}
-
-bool readServerPacket(
-    const utils::Socket &socket,
-    myteams::PacketHeader &outHeader,
-    std::string &outPayload)
-{
-    const std::string headerBuffer = readExact(socket, sizeof(myteams::PacketHeader));
-    std::memcpy(&outHeader, headerBuffer.data(), sizeof(outHeader));
-
-    outPayload.clear();
-    if (outHeader.payload_size == 0) {
-        return true;
-    }
-    outPayload = readExact(socket, outHeader.payload_size);
-    return true;
-}
-
 } // namespace
 
 void handleUse(Client &clientData, ParsedInput &input)
@@ -101,7 +73,7 @@ void handleUse(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerPacket(*clientData.socket, responseHeader, responsePayload);
+    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
     if (responseHeader.code == myteams::ERR_UNAUTHORIZED) {
         std::cout << "You must be logged in to use this command." << std::endl;
         return;

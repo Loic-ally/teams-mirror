@@ -1,5 +1,6 @@
 #include "server/commands/use_command.hpp"
 #include "server/commands/command_utils.hpp"
+#include "server/core/client_manager/client_manager.hpp"
 
 #include <cstring>
 #include <string>

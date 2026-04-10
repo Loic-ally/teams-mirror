@@ -4,6 +4,7 @@
 #include "core/client.hpp"
 #include "parser/parser.hpp"
 
+#include <cstdint>
 #include <iostream>
 
 namespace client::commands {
@@ -16,6 +17,16 @@ void handleHelp(Client &clientData, ParsedInput &input)
     }
     const std::string packet = buildPacket(myteams::CMD_INFO);
     sendPacket(*clientData.socket, packet);
+
+    myteams::PacketHeader responseHeader {};
+    std::string responsePayload;
+    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
+
+    if (responseHeader.code != myteams::RPL_OK) {
+        std::cout << "Server returned unexpected status: " << responseHeader.code << std::endl;
+        return;
+    }
+
     std::cout
         << "/help: display this help\n"
         << "/login \"user_name\": log in with a username\n"
