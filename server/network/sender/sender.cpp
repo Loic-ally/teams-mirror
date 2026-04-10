@@ -1,26 +1,22 @@
 #include "sender.hpp"
+#include "common/utils/Socket.hpp"
 #include "core/client_manager/client_manager.hpp"
 #include "core/exceptions/server_exceptions.hpp"
 
 #include <cerrno>
-
-extern "C" {
-    #include <sys/socket.h>
-    #include <sys/types.h>
-}
 
 namespace server::network {
 
 std::int64_t
 Sender::sendBytes(std::int32_t socketFd, const char *buffer, std::size_t bufferSize)
 {
-	ssize_t sendResult = -1;
-	do {
-		sendResult = ::send(socketFd, buffer, bufferSize, 0);
-	} while (sendResult < 0 && errno == EINTR);
-	if (sendResult < 0)
-		throw SocketSendException(errno);
-	return static_cast<std::int64_t>(sendResult);
+	try {
+		const utils::Socket socket(socketFd);
+		const std::string data(buffer, bufferSize);
+		return static_cast<std::int64_t>(socket.write(data));
+	} catch (const utils::SocketException &exception) {
+		throw SocketSendException(exception.errorNumber());
+	}
 }
 
 bool

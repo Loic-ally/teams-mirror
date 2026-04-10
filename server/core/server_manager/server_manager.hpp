@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <atomic>
 #include <vector>
 
@@ -16,6 +17,10 @@
 extern "C" {
     #include <poll.h>
     #include <sys/socket.h>
+}
+
+namespace utils {
+class Socket;
 }
 
 namespace server {
@@ -40,17 +45,9 @@ class ServerManager {
 		static void handleSignal(std::int32_t signal) noexcept;
 		static void installSignalHandler();
 
-		static void closeSocket(std::int32_t &fd) noexcept;
-		static std::int32_t createTcpSocket();
-		static void setReuseAddress(std::int32_t socketFd);
-		static std::uint32_t toNetworkAddress(std::uint32_t hostAddress);
-		static std::uint16_t toNetworkPort(std::uint16_t hostPort);
 		static std::int32_t pollSockets(std::vector<struct pollfd> &pollFds, std::int32_t timeoutMs);
-		static std::int32_t acceptClient(std::int32_t socketFd);
-		void bindSocket(std::int32_t socketFd) const;
-		static void listenSocket(std::int32_t socketFd, std::int32_t backlog);
 
-		std::int32_t _listenFd;
+		std::unique_ptr<utils::Socket> _listenSocket;
 		std::uint16_t _port;
 		std::vector<myteams::User> _users;
 		std::vector<myteams::Team> _teams;
