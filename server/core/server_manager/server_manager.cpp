@@ -79,6 +79,7 @@ shouldKeepClientConnected(
     const std::int32_t clientFd,
     const short clientEvents,
     std::vector<myteams::User> &users,
+    std::vector<myteams::Team> &teams,
     const ClientSocketMap &clientSockets,
     AuthenticatedUserByFd &authenticatedUsersByFd)
 {
@@ -93,6 +94,7 @@ shouldKeepClientConnected(
             clientManager,
             clientFd,
             users,
+            teams,
             clientSockets,
             authenticatedUsersByFd);
     }
@@ -283,6 +285,7 @@ ServerManager::runPollLoop()
                 currentFd,
                 currentEvents,
                 _users,
+                _teams,
                 clientSockets,
                 authenticatedUsersByFd)) {
                 refreshClientPollInterest(currentPollFd, clientManager, currentFd);

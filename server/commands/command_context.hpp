@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "server/models/team/team.hpp"
 #include "server/models/user/user.hpp"
 
 namespace server {
@@ -32,6 +33,7 @@ struct CommandContext {
     const char *payloadData;
     std::uint16_t payloadSize;
     std::vector<myteams::User> &users;
+    std::vector<myteams::Team> &teams;
     const ClientSockets &clientSockets;
     AuthenticatedUserByFd &authenticatedUsersByFd;
 };

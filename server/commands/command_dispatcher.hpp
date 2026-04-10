@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "server/commands/command_context.hpp"
+#include "server/models/team/team.hpp"
 #include "server/models/user/user.hpp"
 
 namespace server {
@@ -21,6 +22,7 @@ void processClientIncomingPackets(
     ClientManager &clientManager,
     std::int32_t clientFd,
     std::vector<myteams::User> &users,
+    std::vector<myteams::Team> &teams,
     const ClientSockets &clientSockets,
     AuthenticatedUserByFd &authenticatedUsersByFd);
 
