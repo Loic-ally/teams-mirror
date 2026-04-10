@@ -12,7 +12,7 @@
 
 namespace client::commands {
 
-enum class CreateTarget {
+enum CreateTarget {
     Team,
     Channel,
     Thread,
@@ -125,7 +125,7 @@ void handleCreate(Client &clientData, ParsedInput &input)
 
         myteams::PayloadReqCreateReply payload {};
         copyPaddedString(payload.reply_body, sizeof(payload.reply_body), replyBody);
-        sendPacket(*clientData.socket, buildPacket(myteams::CMD_CREATE, &payload, sizeof(payload)));
+        sendPacket(*clientData.socket, buildPacket(myteams::CMD_CREATE, payload));
     } else {
         const std::string firstArg = input.getArg<std::string>();
         const std::string secondArg = input.getArg<std::string>();
@@ -138,17 +138,17 @@ void handleCreate(Client &clientData, ParsedInput &input)
             myteams::PayloadReqCreateTeam payload {};
             copyPaddedString(payload.team_name, sizeof(payload.team_name), firstArg);
             copyPaddedString(payload.team_description, sizeof(payload.team_description), secondArg);
-            sendPacket(*clientData.socket, buildPacket(myteams::CMD_CREATE, &payload, sizeof(payload)));
+            sendPacket(*clientData.socket, buildPacket(myteams::CMD_CREATE, payload));
         } else if (target == CreateTarget::Channel) {
             myteams::PayloadReqCreateChannel payload {};
             copyPaddedString(payload.channel_name, sizeof(payload.channel_name), firstArg);
             copyPaddedString(payload.channel_description, sizeof(payload.channel_description), secondArg);
-            sendPacket(*clientData.socket, buildPacket(myteams::CMD_CREATE, &payload, sizeof(payload)));
+            sendPacket(*clientData.socket, buildPacket(myteams::CMD_CREATE, payload));
         } else {
             myteams::PayloadReqCreateThread payload {};
             copyPaddedString(payload.thread_title, sizeof(payload.thread_title), firstArg);
             copyPaddedString(payload.thread_body, sizeof(payload.thread_body), secondArg);
-            sendPacket(*clientData.socket, buildPacket(myteams::CMD_CREATE, &payload, sizeof(payload)));
+            sendPacket(*clientData.socket, buildPacket(myteams::CMD_CREATE, payload));
         }
     }
 

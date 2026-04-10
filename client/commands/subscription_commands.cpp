@@ -44,7 +44,7 @@ void handleSubscribe(Client &clientData, ParsedInput &input)
     copyPaddedString(payload.team_uuid, sizeof(payload.team_uuid), teamUuid);
     sendPacket(
         *clientData.socket,
-        buildPacket(myteams::CMD_SUBSCRIBE, &payload, sizeof(payload)));
+        buildPacket(myteams::CMD_SUBSCRIBE, payload));
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
@@ -73,7 +73,7 @@ void handleUnsubscribe(Client &clientData, ParsedInput &input)
     copyPaddedString(payload.team_uuid, sizeof(payload.team_uuid), teamUuid);
     sendPacket(
         *clientData.socket,
-        buildPacket(myteams::CMD_UNSUBSCRIBE, &payload, sizeof(payload)));
+        buildPacket(myteams::CMD_UNSUBSCRIBE, payload));
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
@@ -115,7 +115,7 @@ void handleSubscribedList(Client &clientData, ParsedInput &input)
         copyPaddedString(payload.team_uuid, sizeof(payload.team_uuid), teamUuid);
         sendPacket(
             *clientData.socket,
-            buildPacket(myteams::CMD_SUBSCRIBED_LIST, &payload, sizeof(payload)));
+            buildPacket(myteams::CMD_SUBSCRIBED_LIST, payload));
     }
 
     myteams::PacketHeader responseHeader {};

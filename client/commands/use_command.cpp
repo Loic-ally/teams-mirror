@@ -45,7 +45,7 @@ void handleUse(Client &clientData, ParsedInput &input)
     copyPaddedString(payload.team_uuid, sizeof(payload.team_uuid), teamUuid);
     copyPaddedString(payload.channel_uuid, sizeof(payload.channel_uuid), channelUuid);
     copyPaddedString(payload.thread_uuid, sizeof(payload.thread_uuid), threadUuid);
-    sendPacket(*clientData.socket, buildPacket(myteams::CMD_USE, &payload, sizeof(payload)));
+    sendPacket(*clientData.socket, buildPacket(myteams::CMD_USE, payload));
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;

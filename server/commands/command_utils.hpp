@@ -27,7 +27,28 @@ using ThreadRef = std::reference_wrapper<myteams::Thread>;
 
 void copyPaddedString(char *destination, std::size_t size, std::string_view source);
 
-std::string buildPacket(std::uint16_t code, const void *payload = nullptr, std::uint16_t payloadSize = 0);
+std::string buildPacket(std::uint16_t code, std::string_view payload = {});
+
+template <typename PayloadType>
+std::string buildPacket(const std::uint16_t code, const PayloadType &payload)
+{
+    return buildPacket(
+        code,
+        std::string_view(reinterpret_cast<const char *>(&payload), sizeof(PayloadType)));
+}
+
+template <typename PayloadType>
+std::string buildPacket(const std::uint16_t code, const std::vector<PayloadType> &payloads)
+{
+    if (payloads.empty()) {
+        return buildPacket(code);
+    }
+    return buildPacket(
+        code,
+        std::string_view(
+            reinterpret_cast<const char *>(payloads.data()),
+            payloads.size() * sizeof(PayloadType)));
+}
 
 void queuePacket(ClientManager &clientManager, std::int32_t clientFd, const std::string &packet);
 void queueStatus(ClientManager &clientManager, std::int32_t clientFd, myteams::StatusCode status);

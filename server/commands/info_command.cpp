@@ -14,7 +14,7 @@ static void queueUserInfo(CommandContext &context, const myteams::User &user)
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(myteams::RPL_USER_INFO, &payload, sizeof(payload)));
+        buildPacket(myteams::RPL_USER_INFO, payload));
 }
 
 static void queueTeamInfo(CommandContext &context, const myteams::Team &team)
@@ -26,7 +26,7 @@ static void queueTeamInfo(CommandContext &context, const myteams::Team &team)
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(myteams::RPL_TEAMS_LIST, &payload, sizeof(payload)));
+        buildPacket(myteams::RPL_TEAMS_LIST, payload));
 }
 
 static void queueChannelInfo(CommandContext &context, const myteams::Channel &channel)
@@ -38,7 +38,7 @@ static void queueChannelInfo(CommandContext &context, const myteams::Channel &ch
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(myteams::RPL_CHANNELS_LIST, &payload, sizeof(payload)));
+        buildPacket(myteams::RPL_CHANNELS_LIST, payload));
 }
 
 static void queueThreadInfo(CommandContext &context, const myteams::Thread &thread)
@@ -52,7 +52,7 @@ static void queueThreadInfo(CommandContext &context, const myteams::Thread &thre
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(myteams::RPL_THREADS_LIST, &payload, sizeof(payload)));
+        buildPacket(myteams::RPL_THREADS_LIST, payload));
 }
 
 void handleInfoCommand(CommandContext &context)

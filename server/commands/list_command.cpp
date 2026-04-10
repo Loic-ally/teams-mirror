@@ -34,10 +34,7 @@ static void queuePayloadArray(
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(
-            static_cast<std::uint16_t>(status),
-            payloads.data(),
-            static_cast<std::uint16_t>(payloadSize)));
+        buildPacket(static_cast<std::uint16_t>(status), payloads));
 }
 
 static void queueTeamsList(CommandContext &context)

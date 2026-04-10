@@ -60,11 +60,10 @@ class Client {
             if (source == nullptr || size == 0) {
                 return {};
             }
-            const void *nullTerminator = std::memchr(source, '\0', size);
-            if (nullTerminator == nullptr) {
+            const auto *end = static_cast<const char *>(std::memchr(source, '\0', size));
+            if (end == nullptr) {
                 return {};
             }
-            const auto *end = static_cast<const char *>(nullTerminator);
             return std::string(source, static_cast<std::size_t>(end - source));
         }
 

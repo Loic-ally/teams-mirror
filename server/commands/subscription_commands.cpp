@@ -48,11 +48,10 @@ static void queueTeamsList(CommandContext &context, const myteams::User &authent
         return;
     }
 
-    const std::uint16_t payloadSize = static_cast<std::uint16_t>(payloads.size() * sizeof(myteams::PayloadRplTeam));
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(myteams::RPL_TEAMS_LIST, payloads.data(), payloadSize));
+        buildPacket(myteams::RPL_TEAMS_LIST, payloads));
 }
 
 static void queueUsersList(CommandContext &context, const myteams::Team &team)
@@ -81,11 +80,10 @@ static void queueUsersList(CommandContext &context, const myteams::Team &team)
         return;
     }
 
-    const std::uint16_t payloadSize = static_cast<std::uint16_t>(payloads.size() * sizeof(myteams::PayloadRplUser));
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(myteams::RPL_USERS_LIST, payloads.data(), payloadSize));
+        buildPacket(myteams::RPL_USERS_LIST, payloads));
 }
 
 void handleSubscribeCommand(CommandContext &context)

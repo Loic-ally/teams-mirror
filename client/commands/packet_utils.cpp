@@ -29,17 +29,15 @@ static void printUnexpectedPayload(const char *message)
     std::cout << message << std::endl;
 }
 
-std::string buildPacket(
-    const std::uint16_t code,
-    const void *payload,
-    const std::uint16_t payloadSize)
+std::string buildPacket(const std::uint16_t code, const std::string_view payload)
 {
+    const std::uint16_t payloadSize = static_cast<std::uint16_t>(payload.size());
     const myteams::PacketHeader header {code, payloadSize};
     std::string packet(sizeof(header) + payloadSize, '\0');
 
     std::memcpy(packet.data(), &header, sizeof(header));
-    if (payload != nullptr && payloadSize > 0) {
-        std::memcpy(packet.data() + sizeof(header), payload, payloadSize);
+    if (!payload.empty()) {
+        std::memcpy(packet.data() + sizeof(header), payload.data(), payloadSize);
     }
     return packet;
 }

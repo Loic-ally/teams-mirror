@@ -31,14 +31,15 @@ void copyPaddedString(char *destination, const std::size_t size, const std::stri
     destination[copiedLength] = '\0';
 }
 
-std::string buildPacket(const std::uint16_t code, const void *payload, const std::uint16_t payloadSize)
+std::string buildPacket(const std::uint16_t code, const std::string_view payload)
 {
+    const std::uint16_t payloadSize = static_cast<std::uint16_t>(payload.size());
     const myteams::PacketHeader header {code, payloadSize};
     std::string packet(sizeof(header) + payloadSize, '\0');
 
     std::memcpy(packet.data(), &header, sizeof(header));
-    if (payload != nullptr && payloadSize > 0) {
-        std::memcpy(packet.data() + sizeof(header), payload, payloadSize);
+    if (!payload.empty()) {
+        std::memcpy(packet.data() + sizeof(header), payload.data(), payloadSize);
     }
     return packet;
 }
@@ -175,11 +176,10 @@ bool extractFixedString(const char *rawData, const std::size_t rawSize, std::str
     if (rawData == nullptr || rawSize == 0) {
         return false;
     }
-    const void *nullTerminator = std::memchr(rawData, '\0', rawSize);
-    if (nullTerminator == nullptr) {
+    const auto *end = static_cast<const char *>(std::memchr(rawData, '\0', rawSize));
+    if (end == nullptr) {
         return false;
     }
-    const auto *end = static_cast<const char *>(nullTerminator);
     outString.assign(rawData, static_cast<std::size_t>(end - rawData));
     return true;
 }
@@ -192,7 +192,7 @@ std::string buildUserConnectionEventPacket(
     myteams::PayloadEvtUserConnection payload {};
     copyPaddedString(payload.user_uuid, sizeof(payload.user_uuid), userUuid);
     copyPaddedString(payload.user_name, sizeof(payload.user_name), userName);
-    return buildPacket(static_cast<std::uint16_t>(eventCode), &payload, sizeof(payload));
+    return buildPacket(static_cast<std::uint16_t>(eventCode), payload);
 }
 
 } // namespace server::commands

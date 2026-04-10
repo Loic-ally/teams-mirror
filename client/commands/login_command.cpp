@@ -31,8 +31,7 @@ void handleLogin(Client &clientData, ParsedInput &input)
 
     myteams::PayloadReqLogin payload {};
     copyPaddedString(payload.user_name, sizeof(payload.user_name), username);
-    const std::string packet =
-        buildPacket(myteams::CMD_LOGIN, &payload, sizeof(payload));
+    const std::string packet = buildPacket(myteams::CMD_LOGIN, payload);
     sendPacket(*clientData.socket, packet);
 
     myteams::PacketHeader responseHeader {};

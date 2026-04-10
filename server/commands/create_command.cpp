@@ -171,7 +171,7 @@ static void handleCreateTeam(CommandContext &context, myteams::User &authenticat
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(myteams::RPL_CREATED, &createdPayload, sizeof(createdPayload)));
+        buildPacket(myteams::RPL_CREATED, createdPayload));
 
     myteams::PayloadEvtTeamCreated eventPayload {};
     copyPaddedString(eventPayload.team_uuid, sizeof(eventPayload.team_uuid), createdTeam.getUuid());
@@ -179,7 +179,7 @@ static void handleCreateTeam(CommandContext &context, myteams::User &authenticat
     copyPaddedString(eventPayload.team_description, sizeof(eventPayload.team_description), createdTeam.getDescription());
     broadcastPacket(
         context,
-        buildPacket(myteams::EVT_TEAM_CREATED, &eventPayload, sizeof(eventPayload)));
+        buildPacket(myteams::EVT_TEAM_CREATED, eventPayload));
 }
 
 static std::optional<TeamChannel> resolveContextTeamChannel(
@@ -239,7 +239,7 @@ static void handleCreateChannel(CommandContext &context, myteams::User &authenti
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(myteams::RPL_CREATED, &createdPayload, sizeof(createdPayload)));
+        buildPacket(myteams::RPL_CREATED, createdPayload));
 
     myteams::PayloadEvtChannelCreated eventPayload {};
     copyPaddedString(eventPayload.channel_uuid, sizeof(eventPayload.channel_uuid), channelUuid);
@@ -248,7 +248,7 @@ static void handleCreateChannel(CommandContext &context, myteams::User &authenti
     queuePacketToTeamSubscribers(
         context,
         resolvedTeam,
-        buildPacket(myteams::EVT_CHANNEL_CREATED, &eventPayload, sizeof(eventPayload)));
+        buildPacket(myteams::EVT_CHANNEL_CREATED, eventPayload));
 }
 
 static void handleCreateThread(CommandContext &context, myteams::User &authenticatedUser)
@@ -281,7 +281,7 @@ static void handleCreateThread(CommandContext &context, myteams::User &authentic
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(myteams::RPL_CREATED, &createdPayload, sizeof(createdPayload)));
+        buildPacket(myteams::RPL_CREATED, createdPayload));
 
     myteams::PayloadEvtThreadCreated eventPayload {};
     copyPaddedString(eventPayload.thread_uuid, sizeof(eventPayload.thread_uuid), threadUuid);
@@ -292,7 +292,7 @@ static void handleCreateThread(CommandContext &context, myteams::User &authentic
     queuePacketToTeamSubscribers(
         context,
         team,
-        buildPacket(myteams::EVT_THREAD_CREATED, &eventPayload, sizeof(eventPayload)));
+        buildPacket(myteams::EVT_THREAD_CREATED, eventPayload));
 }
 
 static void handleCreateReply(CommandContext &context, myteams::User &authenticatedUser)
@@ -330,7 +330,7 @@ static void handleCreateReply(CommandContext &context, myteams::User &authentica
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(myteams::RPL_CREATED, &createdPayload, sizeof(createdPayload)));
+        buildPacket(myteams::RPL_CREATED, createdPayload));
 
     myteams::PayloadEvtReplyCreated eventPayload {};
     copyPaddedString(eventPayload.team_uuid, sizeof(eventPayload.team_uuid), team.getUuid());
@@ -340,7 +340,7 @@ static void handleCreateReply(CommandContext &context, myteams::User &authentica
     queuePacketToTeamSubscribers(
         context,
         team,
-        buildPacket(myteams::EVT_REPLY_CREATED, &eventPayload, sizeof(eventPayload)));
+        buildPacket(myteams::EVT_REPLY_CREATED, eventPayload));
 }
 
 void handleCreateCommand(CommandContext &context)

@@ -15,10 +15,15 @@
 
 namespace client::commands {
 
-std::string buildPacket(
-    std::uint16_t code,
-    const void *payload = nullptr,
-    std::uint16_t payloadSize = 0);
+std::string buildPacket(std::uint16_t code, std::string_view payload = {});
+
+template <typename PayloadType>
+std::string buildPacket(const std::uint16_t code, const PayloadType &payload)
+{
+    return buildPacket(
+        code,
+        std::string_view(reinterpret_cast<const char *>(&payload), sizeof(PayloadType)));
+}
 
 void sendPacket(const utils::Socket &socket, const std::string &packet);
 
