@@ -13,15 +13,14 @@
 #include <string>
 
 namespace client::commands {
-namespace {
 
 template <typename PayloadType>
-bool isPayloadArrayWellFormed(const std::string &payload)
+static bool isPayloadArrayWellFormed(const std::string &payload)
 {
     return (payload.size() % sizeof(PayloadType)) == 0;
 }
 
-void printTeamsList(const std::string &payload)
+static void printTeamsList(const std::string &payload)
 {
     if (!isPayloadArrayWellFormed<myteams::PayloadRplTeam>(payload)) {
         std::cout << "Malformed teams list payload received from server." << std::endl;
@@ -35,14 +34,14 @@ void printTeamsList(const std::string &payload)
             &teamPayload,
             payload.data() + (index * sizeof(teamPayload)),
             sizeof(teamPayload));
-        (void)Printer::printTeams(
+        Printer::printTeams(
             teamPayload.team_uuid,
             teamPayload.team_name,
             teamPayload.team_description);
     }
 }
 
-void printChannelsList(const std::string &payload)
+static void printChannelsList(const std::string &payload)
 {
     if (!isPayloadArrayWellFormed<myteams::PayloadRplChannel>(payload)) {
         std::cout << "Malformed channels list payload received from server." << std::endl;
@@ -56,14 +55,14 @@ void printChannelsList(const std::string &payload)
             &channelPayload,
             payload.data() + (index * sizeof(channelPayload)),
             sizeof(channelPayload));
-        (void)Printer::printTeamChannels(
+        Printer::printTeamChannels(
             channelPayload.channel_uuid,
             channelPayload.channel_name,
             channelPayload.channel_description);
     }
 }
 
-void printThreadsList(const std::string &payload)
+static void printThreadsList(const std::string &payload)
 {
     if (!isPayloadArrayWellFormed<myteams::PayloadRplThread>(payload)) {
         std::cout << "Malformed threads list payload received from server." << std::endl;
@@ -77,7 +76,7 @@ void printThreadsList(const std::string &payload)
             &threadPayload,
             payload.data() + (index * sizeof(threadPayload)),
             sizeof(threadPayload));
-        (void)Printer::printChannelThreads(
+        Printer::printChannelThreads(
             threadPayload.thread_uuid,
             threadPayload.user_uuid,
             static_cast<std::time_t>(threadPayload.thread_timestamp),
@@ -86,7 +85,7 @@ void printThreadsList(const std::string &payload)
     }
 }
 
-void printRepliesList(const std::string &payload)
+static void printRepliesList(const std::string &payload)
 {
     if (!isPayloadArrayWellFormed<myteams::PayloadRplReply>(payload)) {
         std::cout << "Malformed replies list payload received from server." << std::endl;
@@ -100,7 +99,7 @@ void printRepliesList(const std::string &payload)
             &replyPayload,
             payload.data() + (index * sizeof(replyPayload)),
             sizeof(replyPayload));
-        (void)Printer::printThreadReplies(
+        Printer::printThreadReplies(
             replyPayload.thread_uuid,
             replyPayload.user_uuid,
             static_cast<std::time_t>(replyPayload.reply_timestamp),
@@ -108,10 +107,10 @@ void printRepliesList(const std::string &payload)
     }
 }
 
-void handleListError(const std::uint16_t code)
+static void handleListError(const std::uint16_t code)
 {
     if (code == myteams::ERR_UNAUTHORIZED) {
-        (void)Printer::errorUnauthorized();
+        Printer::errorUnauthorized();
         return;
     }
     if (code == myteams::ERR_NOT_FOUND) {
@@ -126,8 +125,6 @@ void handleListError(const std::uint16_t code)
     std::cout << "Server returned unexpected status: " << code << std::endl;
 }
 
-} // namespace
-
 void handleList(Client &clientData, ParsedInput &input)
 {
     if (input.hasRemainingArgs()) {
@@ -139,7 +136,7 @@ void handleList(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
+    readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::RPL_TEAMS_LIST) {
         printTeamsList(responsePayload);

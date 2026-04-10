@@ -14,6 +14,19 @@
 
 namespace server::database {
 
+namespace detail {
+
+struct SerializedLines {
+	std::vector<std::string> users;
+	std::vector<std::string> teams;
+	std::vector<std::string> teamSubscriptions;
+	std::vector<std::string> channels;
+	std::vector<std::string> threads;
+	std::vector<std::string> messages;
+};
+
+} // namespace detail
+
 class DatabaseSaver {
 	public:
 		explicit DatabaseSaver(std::filesystem::path baseDirectory = "server_data", char delimiter = '|');

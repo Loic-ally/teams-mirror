@@ -7,43 +7,12 @@
 #include <cstring>
 #include <limits>
 #include <string>
-#include <string_view>
 #include <vector>
 
 namespace server::commands {
-namespace {
-
-myteams::User *getAuthenticatedUser(CommandContext &context)
-{
-    const auto authenticatedUserIt = context.authenticatedUsersByFd.find(context.clientFd);
-    if (authenticatedUserIt == context.authenticatedUsersByFd.end()) {
-        return nullptr;
-    }
-    return findUserByUuid(context.users, authenticatedUserIt->second);
-}
-
-myteams::Channel *findChannelByUuid(myteams::Team &team, const std::string_view channelUuid)
-{
-    for (myteams::Channel &channel : team.getChannels()) {
-        if (channel.getUuid() == channelUuid) {
-            return &channel;
-        }
-    }
-    return nullptr;
-}
-
-myteams::Thread *findThreadByUuid(myteams::Channel &channel, const std::string_view threadUuid)
-{
-    for (myteams::Thread &thread : channel.getThreads()) {
-        if (thread.getUuid() == threadUuid) {
-            return &thread;
-        }
-    }
-    return nullptr;
-}
 
 template <typename PayloadType>
-bool queuePayloadArray(
+static void queuePayloadArray(
     CommandContext &context,
     const myteams::StatusCode status,
     const std::vector<PayloadType> &payloads)
@@ -53,13 +22,13 @@ bool queuePayloadArray(
             context.clientManager,
             context.clientFd,
             buildPacket(static_cast<std::uint16_t>(status)));
-        return true;
+        return;
     }
 
     const std::size_t payloadSize = payloads.size() * sizeof(PayloadType);
     if (payloadSize > std::numeric_limits<std::uint16_t>::max()) {
         queueStatus(context, myteams::ERR_SERVER_INTERNAL);
-        return false;
+        return;
     }
 
     queuePacket(
@@ -69,10 +38,9 @@ bool queuePayloadArray(
             static_cast<std::uint16_t>(status),
             payloads.data(),
             static_cast<std::uint16_t>(payloadSize)));
-    return true;
 }
 
-void queueTeamsList(CommandContext &context)
+static void queueTeamsList(CommandContext &context)
 {
     std::vector<myteams::PayloadRplTeam> payloads;
     payloads.reserve(context.teams.size());
@@ -85,10 +53,10 @@ void queueTeamsList(CommandContext &context)
         payloads.push_back(payload);
     }
 
-    (void)queuePayloadArray(context, myteams::RPL_TEAMS_LIST, payloads);
+    queuePayloadArray(context, myteams::RPL_TEAMS_LIST, payloads);
 }
 
-void queueChannelsList(CommandContext &context, const myteams::Team &team)
+static void queueChannelsList(CommandContext &context, const myteams::Team &team)
 {
     std::vector<myteams::PayloadRplChannel> payloads;
     payloads.reserve(team.getChannels().size());
@@ -101,10 +69,10 @@ void queueChannelsList(CommandContext &context, const myteams::Team &team)
         payloads.push_back(payload);
     }
 
-    (void)queuePayloadArray(context, myteams::RPL_CHANNELS_LIST, payloads);
+    queuePayloadArray(context, myteams::RPL_CHANNELS_LIST, payloads);
 }
 
-void queueThreadsList(CommandContext &context, const myteams::Channel &channel)
+static void queueThreadsList(CommandContext &context, const myteams::Channel &channel)
 {
     std::vector<myteams::PayloadRplThread> payloads;
     payloads.reserve(channel.getThreads().size());
@@ -119,10 +87,10 @@ void queueThreadsList(CommandContext &context, const myteams::Channel &channel)
         payloads.push_back(payload);
     }
 
-    (void)queuePayloadArray(context, myteams::RPL_THREADS_LIST, payloads);
+    queuePayloadArray(context, myteams::RPL_THREADS_LIST, payloads);
 }
 
-void queueRepliesList(CommandContext &context, const myteams::Thread &thread)
+static void queueRepliesList(CommandContext &context, const myteams::Thread &thread)
 {
     std::vector<myteams::PayloadRplReply> payloads;
     payloads.reserve(thread.getReplies().size());
@@ -136,24 +104,8 @@ void queueRepliesList(CommandContext &context, const myteams::Thread &thread)
         payloads.push_back(payload);
     }
 
-    (void)queuePayloadArray(context, myteams::RPL_REPLIES_LIST, payloads);
+    queuePayloadArray(context, myteams::RPL_REPLIES_LIST, payloads);
 }
-
-bool isContextCombinationValid(
-    const std::string &teamUuid,
-    const std::string &channelUuid,
-    const std::string &threadUuid)
-{
-    if (teamUuid.empty() && (!channelUuid.empty() || !threadUuid.empty())) {
-        return false;
-    }
-    if (channelUuid.empty() && !threadUuid.empty()) {
-        return false;
-    }
-    return true;
-}
-
-} // namespace
 
 void handleListCommand(CommandContext &context)
 {
@@ -162,11 +114,12 @@ void handleListCommand(CommandContext &context)
         return;
     }
 
-    myteams::User *authenticatedUser = getAuthenticatedUser(context);
-    if (authenticatedUser == nullptr) {
+    const auto authenticatedUser = getAuthenticatedUser(context);
+    if (!authenticatedUser.has_value()) {
         queueStatus(context, myteams::ERR_UNAUTHORIZED);
         return;
     }
+    const myteams::User &resolvedUser = authenticatedUser->get();
 
     const std::string teamUuid = context.clientManager.getContextTeamUuid(context.clientFd);
     const std::string channelUuid = context.clientManager.getContextChannelUuid(context.clientFd);
@@ -182,39 +135,41 @@ void handleListCommand(CommandContext &context)
         return;
     }
 
-    myteams::Team *team = findTeamByUuid(context.teams, teamUuid);
-    if (team == nullptr) {
+    const auto team = findTeamByUuid(context.teams, teamUuid);
+    if (!team.has_value()) {
         queueStatus(context, myteams::ERR_NOT_FOUND);
         return;
     }
-    if (!team->isUserSubscribed(authenticatedUser->getUuid())) {
+    myteams::Team &resolvedTeam = team->get();
+    if (!resolvedTeam.isUserSubscribed(resolvedUser.getUuid())) {
         queueStatus(context, myteams::ERR_UNAUTHORIZED);
         return;
     }
 
     if (channelUuid.empty()) {
-        queueChannelsList(context, *team);
+        queueChannelsList(context, resolvedTeam);
         return;
     }
 
-    myteams::Channel *channel = findChannelByUuid(*team, channelUuid);
-    if (channel == nullptr) {
+    const auto channel = findChannelByUuid(resolvedTeam, channelUuid);
+    if (!channel.has_value()) {
         queueStatus(context, myteams::ERR_NOT_FOUND);
         return;
     }
+    myteams::Channel &resolvedChannel = channel->get();
 
     if (threadUuid.empty()) {
-        queueThreadsList(context, *channel);
+        queueThreadsList(context, resolvedChannel);
         return;
     }
 
-    myteams::Thread *thread = findThreadByUuid(*channel, threadUuid);
-    if (thread == nullptr) {
+    const auto thread = findThreadByUuid(resolvedChannel, threadUuid);
+    if (!thread.has_value()) {
         queueStatus(context, myteams::ERR_NOT_FOUND);
         return;
     }
 
-    queueRepliesList(context, *thread);
+    queueRepliesList(context, thread->get());
 }
 
 } // namespace server::commands

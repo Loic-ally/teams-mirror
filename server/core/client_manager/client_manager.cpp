@@ -28,12 +28,12 @@ ClientManager::hasPendingWrite(std::int32_t socketFd) const noexcept
 }
 
 void
-ClientManager::appendToIncomingBuffer(std::int32_t socketFd, const char *data, std::size_t size)
+ClientManager::appendToIncomingBuffer(std::int32_t socketFd, const std::string_view data)
 {
 	auto it = _clients.find(socketFd);
-	if (it == _clients.end() || data == nullptr || size == 0)
+	if (it == _clients.end() || data.empty())
 		return;
-	it->second.incomingBuffer.append(data, size);
+	it->second.incomingBuffer.append(data);
 }
 
 const std::string &
@@ -70,21 +70,21 @@ ClientManager::consumeIncomingBuffer(std::int32_t socketFd, std::size_t consumed
 }
 
 void
-ClientManager::queueDataToSend(std::int32_t socketFd, const char *data, std::size_t size)
+ClientManager::queueDataToSend(std::int32_t socketFd, const std::string_view data)
 {
 	auto it = _clients.find(socketFd);
-	if (it == _clients.end() || data == nullptr || size == 0)
+	if (it == _clients.end() || data.empty())
 		return;
-	it->second.outgoingBuffer.append(data, size);
+	it->second.outgoingBuffer.append(data);
 }
 
-const char *
+std::string_view
 ClientManager::getQueuedData(std::int32_t socketFd) const noexcept
 {
 	auto it = _clients.find(socketFd);
 	if (it == _clients.end() || it->second.outgoingBuffer.empty())
-		return nullptr;
-	return it->second.outgoingBuffer.data();
+		return {};
+	return it->second.outgoingBuffer;
 }
 
 std::size_t

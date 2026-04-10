@@ -1,4 +1,9 @@
+#ifndef SERVER_MODELS_TEAM_TEAM_HPP
+#define SERVER_MODELS_TEAM_TEAM_HPP
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include <array>
 #include <algorithm>
@@ -133,3 +138,5 @@ namespace myteams
         std::vector<Channel> channels_ {};
     };
 } // namespace myteams
+
+#endif // SERVER_MODELS_TEAM_TEAM_HPP

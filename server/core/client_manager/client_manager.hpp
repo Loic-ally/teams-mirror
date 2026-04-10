@@ -23,13 +23,13 @@ class ClientManager {
 		bool hasClient(std::int32_t socketFd) const noexcept;
 		bool hasPendingWrite(std::int32_t socketFd) const noexcept;
 
-		void appendToIncomingBuffer(std::int32_t socketFd, const char *data, std::size_t size);
+		void appendToIncomingBuffer(std::int32_t socketFd, std::string_view data);
 		const std::string &getIncomingBuffer(std::int32_t socketFd) const noexcept;
 		void clearIncomingBuffer(std::int32_t socketFd) noexcept;
 		void consumeIncomingBuffer(std::int32_t socketFd, std::size_t consumedBytes) noexcept;
 
-		void queueDataToSend(std::int32_t socketFd, const char *data, std::size_t size);
-		const char *getQueuedData(std::int32_t socketFd) const noexcept;
+		void queueDataToSend(std::int32_t socketFd, std::string_view data);
+		std::string_view getQueuedData(std::int32_t socketFd) const noexcept;
 		std::size_t getQueuedSize(std::int32_t socketFd) const noexcept;
 		void consumeQueuedData(std::int32_t socketFd, std::size_t consumedBytes) noexcept;
 

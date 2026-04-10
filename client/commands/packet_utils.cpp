@@ -3,6 +3,7 @@
 #include "display/printer.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <ctime>
 #include <cstring>
 #include <iostream>
@@ -11,9 +12,7 @@
 
 namespace client::commands {
 
-namespace {
-
-std::string readExact(const utils::Socket &socket, const std::size_t wantedSize)
+static std::string readExact(const utils::Socket &socket, const std::size_t wantedSize)
 {
     std::string buffer;
     buffer.reserve(wantedSize);
@@ -25,12 +24,10 @@ std::string readExact(const utils::Socket &socket, const std::size_t wantedSize)
     return buffer;
 }
 
-void printUnexpectedPayload(const char *message)
+static void printUnexpectedPayload(const char *message)
 {
     std::cout << message << std::endl;
 }
-
-} // namespace
 
 std::string buildPacket(
     const std::uint16_t code,
@@ -73,7 +70,7 @@ void copyPaddedString(
     destination[copiedLength] = '\0';
 }
 
-bool readServerPacket(
+void readServerPacket(
     const utils::Socket &socket,
     myteams::PacketHeader &outHeader,
     std::string &outPayload)
@@ -83,10 +80,9 @@ bool readServerPacket(
 
     outPayload.clear();
     if (outHeader.payload_size == 0) {
-        return true;
+        return;
     }
     outPayload = readExact(socket, outHeader.payload_size);
-    return true;
 }
 
 bool handleAsyncEventPacket(const std::uint16_t code, const std::string &payload)
@@ -98,7 +94,7 @@ bool handleAsyncEventPacket(const std::uint16_t code, const std::string &payload
         }
         myteams::PayloadEvtUserConnection eventPayload {};
         std::memcpy(&eventPayload, payload.data(), sizeof(eventPayload));
-        (void)Printer::eventLoggedIn(eventPayload.user_uuid, eventPayload.user_name);
+        Printer::eventLoggedIn(eventPayload.user_uuid, eventPayload.user_name);
         return true;
     }
     if (code == myteams::EVT_LOGGED_OUT) {
@@ -108,7 +104,7 @@ bool handleAsyncEventPacket(const std::uint16_t code, const std::string &payload
         }
         myteams::PayloadEvtUserConnection eventPayload {};
         std::memcpy(&eventPayload, payload.data(), sizeof(eventPayload));
-        (void)Printer::eventLoggedOut(eventPayload.user_uuid, eventPayload.user_name);
+        Printer::eventLoggedOut(eventPayload.user_uuid, eventPayload.user_name);
         return true;
     }
     if (code == myteams::EVT_PRIVATE_MSG_RCVD) {
@@ -118,7 +114,7 @@ bool handleAsyncEventPacket(const std::uint16_t code, const std::string &payload
         }
         myteams::PayloadEvtPrivateMsg eventPayload {};
         std::memcpy(&eventPayload, payload.data(), sizeof(eventPayload));
-        (void)Printer::eventPrivateMessageReceived(eventPayload.sender_uuid, eventPayload.message_body);
+        Printer::eventPrivateMessageReceived(eventPayload.sender_uuid, eventPayload.message_body);
         return true;
     }
     if (code == myteams::EVT_TEAM_CREATED) {
@@ -128,7 +124,7 @@ bool handleAsyncEventPacket(const std::uint16_t code, const std::string &payload
         }
         myteams::PayloadEvtTeamCreated eventPayload {};
         std::memcpy(&eventPayload, payload.data(), sizeof(eventPayload));
-        (void)Printer::eventTeamCreated(
+        Printer::eventTeamCreated(
             eventPayload.team_uuid,
             eventPayload.team_name,
             eventPayload.team_description);
@@ -141,7 +137,7 @@ bool handleAsyncEventPacket(const std::uint16_t code, const std::string &payload
         }
         myteams::PayloadEvtChannelCreated eventPayload {};
         std::memcpy(&eventPayload, payload.data(), sizeof(eventPayload));
-        (void)Printer::eventChannelCreated(
+        Printer::eventChannelCreated(
             eventPayload.channel_uuid,
             eventPayload.channel_name,
             eventPayload.channel_description);
@@ -154,7 +150,7 @@ bool handleAsyncEventPacket(const std::uint16_t code, const std::string &payload
         }
         myteams::PayloadEvtThreadCreated eventPayload {};
         std::memcpy(&eventPayload, payload.data(), sizeof(eventPayload));
-        (void)Printer::eventThreadCreated(
+        Printer::eventThreadCreated(
             eventPayload.thread_uuid,
             eventPayload.user_uuid,
             static_cast<std::time_t>(eventPayload.thread_timestamp),
@@ -169,7 +165,7 @@ bool handleAsyncEventPacket(const std::uint16_t code, const std::string &payload
         }
         myteams::PayloadEvtReplyCreated eventPayload {};
         std::memcpy(&eventPayload, payload.data(), sizeof(eventPayload));
-        (void)Printer::eventThreadReplyReceived(
+        Printer::eventThreadReplyReceived(
             eventPayload.team_uuid,
             eventPayload.thread_uuid,
             eventPayload.user_uuid,
@@ -180,17 +176,36 @@ bool handleAsyncEventPacket(const std::uint16_t code, const std::string &payload
     return false;
 }
 
-bool readServerReply(
+void readServerReply(
     const utils::Socket &socket,
     myteams::PacketHeader &outHeader,
     std::string &outPayload)
 {
-    for (;;) {
-        (void)readServerPacket(socket, outHeader, outPayload);
+    while(true) {
+        readServerPacket(socket, outHeader, outPayload);
         if (!handleAsyncEventPacket(outHeader.code, outPayload)) {
-            return true;
+            return;
         }
     }
+}
+
+bool isUuidFormatValid(const std::string_view uuid)
+{
+    if (uuid.size() != myteams::UUID_LENGTH - 1) {
+        return false;
+    }
+    for (std::size_t index = 0; index < uuid.size(); ++index) {
+        if (index == 8 || index == 13 || index == 18 || index == 23) {
+            if (uuid[index] != '-') {
+                return false;
+            }
+            continue;
+        }
+        if (!std::isxdigit(static_cast<unsigned char>(uuid[index]))) {
+            return false;
+        }
+    }
+    return true;
 }
 
 }

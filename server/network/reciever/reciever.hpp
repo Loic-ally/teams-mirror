@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace server {
 
@@ -19,7 +20,7 @@ class Reciever {
 		static bool readClientData(ClientManager &clientManager, std::int32_t clientFd);
 
 	private:
-		static std::int64_t recvBytes(std::int32_t socketFd, char *buffer, std::size_t bufferSize);
+		static std::string recvBytes(std::int32_t socketFd, std::size_t bufferSize);
 };
 
 } // namespace network

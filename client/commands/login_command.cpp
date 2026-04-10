@@ -37,16 +37,16 @@ void handleLogin(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
+    readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::RPL_OK) {
         clientData.connected = true;
         clientData.username = username;
-        (void)Printer::eventLoggedIn("", clientData.username);
+        Printer::eventLoggedIn("", clientData.username);
         return;
     }
     if (responseHeader.code == myteams::ERR_ALREADY_EXIST) {
-        (void)Printer::errorAlreadyExist();
+        Printer::errorAlreadyExist();
         return;
     }
     if (responseHeader.code == myteams::ERR_BAD_REQUEST) {

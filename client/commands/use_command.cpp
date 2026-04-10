@@ -4,34 +4,10 @@
 #include "packet_utils.hpp"
 #include "parser/parser.hpp"
 
-#include <cstring>
-#include <cctype>
 #include <iostream>
 #include <string>
 
 namespace client::commands {
-namespace {
-
-bool isUuidFormatValid(const std::string &uuid)
-{
-    if (uuid.size() != myteams::UUID_LENGTH - 1) {
-        return false;
-    }
-    for (std::size_t index = 0; index < uuid.size(); ++index) {
-        if (index == 8 || index == 13 || index == 18 || index == 23) {
-            if (uuid[index] != '-') {
-                return false;
-            }
-            continue;
-        }
-        if (!std::isxdigit(static_cast<unsigned char>(uuid[index]))) {
-            return false;
-        }
-    }
-    return true;
-}
-
-} // namespace
 
 void handleUse(Client &clientData, ParsedInput &input)
 {
@@ -73,7 +49,7 @@ void handleUse(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
+    readServerReply(*clientData.socket, responseHeader, responsePayload);
     if (responseHeader.code == myteams::ERR_UNAUTHORIZED) {
         std::cout << "You must be logged in to use this command." << std::endl;
         return;

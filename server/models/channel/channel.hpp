@@ -1,4 +1,9 @@
+#ifndef SERVER_MODELS_CHANNEL_CHANNEL_HPP
+#define SERVER_MODELS_CHANNEL_CHANNEL_HPP
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include <cstring>
 #include <string>
@@ -85,3 +90,5 @@ namespace myteams
         std::vector<Thread> threads_ {};
     };
 } // namespace myteams
+
+#endif // SERVER_MODELS_CHANNEL_CHANNEL_HPP

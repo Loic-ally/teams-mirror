@@ -6,43 +6,16 @@
 #include <cstdint>
 #include <ctime>
 #include <cstring>
+#include <optional>
 #include <string>
-#include <string_view>
+#include <utility>
 #include <vector>
 
 namespace server::commands {
-namespace {
 
-myteams::User *getAuthenticatedUser(CommandContext &context)
-{
-    const auto authenticatedUserIt = context.authenticatedUsersByFd.find(context.clientFd);
-    if (authenticatedUserIt == context.authenticatedUsersByFd.end()) {
-        return nullptr;
-    }
-    return findUserByUuid(context.users, authenticatedUserIt->second);
-}
+using TeamChannel = std::pair<TeamRef, ChannelRef>;
 
-myteams::Channel *findChannelByUuid(myteams::Team &team, const std::string_view channelUuid)
-{
-    for (myteams::Channel &channel : team.getChannels()) {
-        if (channel.getUuid() == channelUuid) {
-            return &channel;
-        }
-    }
-    return nullptr;
-}
-
-myteams::Thread *findThreadByUuid(myteams::Channel &channel, const std::string_view threadUuid)
-{
-    for (myteams::Thread &thread : channel.getThreads()) {
-        if (thread.getUuid() == threadUuid) {
-            return &thread;
-        }
-    }
-    return nullptr;
-}
-
-bool isChannelUuidUsed(const std::vector<myteams::Team> &teams, const std::string_view channelUuid)
+static bool isChannelUuidUsed(const std::vector<myteams::Team> &teams, const std::string_view channelUuid)
 {
     for (const myteams::Team &team : teams) {
         for (const myteams::Channel &channel : team.getChannels()) {
@@ -54,7 +27,7 @@ bool isChannelUuidUsed(const std::vector<myteams::Team> &teams, const std::strin
     return false;
 }
 
-bool isThreadUuidUsed(const std::vector<myteams::Team> &teams, const std::string_view threadUuid)
+static bool isThreadUuidUsed(const std::vector<myteams::Team> &teams, const std::string_view threadUuid)
 {
     for (const myteams::Team &team : teams) {
         for (const myteams::Channel &channel : team.getChannels()) {
@@ -68,16 +41,16 @@ bool isThreadUuidUsed(const std::vector<myteams::Team> &teams, const std::string
     return false;
 }
 
-std::string generateUniqueTeamUuid(std::vector<myteams::Team> &teams)
+static std::string generateUniqueTeamUuid(std::vector<myteams::Team> &teams)
 {
     std::string candidate = generateUuid();
-    while (findTeamByUuid(teams, candidate) != nullptr) {
+    while (findTeamByUuid(teams, candidate).has_value()) {
         candidate = generateUuid();
     }
     return candidate;
 }
 
-std::string generateUniqueChannelUuid(const std::vector<myteams::Team> &teams)
+static std::string generateUniqueChannelUuid(const std::vector<myteams::Team> &teams)
 {
     std::string candidate = generateUuid();
     while (isChannelUuidUsed(teams, candidate)) {
@@ -86,7 +59,7 @@ std::string generateUniqueChannelUuid(const std::vector<myteams::Team> &teams)
     return candidate;
 }
 
-std::string generateUniqueThreadUuid(const std::vector<myteams::Team> &teams)
+static std::string generateUniqueThreadUuid(const std::vector<myteams::Team> &teams)
 {
     std::string candidate = generateUuid();
     while (isThreadUuidUsed(teams, candidate)) {
@@ -95,7 +68,7 @@ std::string generateUniqueThreadUuid(const std::vector<myteams::Team> &teams)
     return candidate;
 }
 
-bool parseCreateTeamPayload(CommandContext &context, std::string &outName, std::string &outDescription)
+static bool parseCreateTeamPayload(CommandContext &context, std::string &outName, std::string &outDescription)
 {
     if (context.payloadSize != sizeof(myteams::PayloadReqCreateTeam)) {
         queueStatus(context, myteams::ERR_BAD_REQUEST);
@@ -113,7 +86,7 @@ bool parseCreateTeamPayload(CommandContext &context, std::string &outName, std::
     return true;
 }
 
-bool parseCreateChannelPayload(CommandContext &context, std::string &outName, std::string &outDescription)
+static bool parseCreateChannelPayload(CommandContext &context, std::string &outName, std::string &outDescription)
 {
     if (context.payloadSize != sizeof(myteams::PayloadReqCreateChannel)) {
         queueStatus(context, myteams::ERR_BAD_REQUEST);
@@ -131,7 +104,7 @@ bool parseCreateChannelPayload(CommandContext &context, std::string &outName, st
     return true;
 }
 
-bool parseCreateThreadPayload(CommandContext &context, std::string &outTitle, std::string &outBody)
+static bool parseCreateThreadPayload(CommandContext &context, std::string &outTitle, std::string &outBody)
 {
     if (context.payloadSize != sizeof(myteams::PayloadReqCreateThread)) {
         queueStatus(context, myteams::ERR_BAD_REQUEST);
@@ -150,7 +123,7 @@ bool parseCreateThreadPayload(CommandContext &context, std::string &outTitle, st
     return true;
 }
 
-bool parseCreateReplyPayload(CommandContext &context, std::string &outBody)
+static bool parseCreateReplyPayload(CommandContext &context, std::string &outBody)
 {
     if (context.payloadSize != sizeof(myteams::PayloadReqCreateReply)) {
         queueStatus(context, myteams::ERR_BAD_REQUEST);
@@ -166,7 +139,7 @@ bool parseCreateReplyPayload(CommandContext &context, std::string &outBody)
     return true;
 }
 
-void queuePacketToTeamSubscribers(CommandContext &context, const myteams::Team &team, const std::string &packet)
+static void queuePacketToTeamSubscribers(CommandContext &context, const myteams::Team &team, const std::string &packet)
 {
     for (const auto &[socketFd, userUuid] : context.authenticatedUsersByFd) {
         if (!team.isUserSubscribed(userUuid)) {
@@ -176,7 +149,7 @@ void queuePacketToTeamSubscribers(CommandContext &context, const myteams::Team &
     }
 }
 
-void handleCreateTeam(CommandContext &context, myteams::User &authenticatedUser)
+static void handleCreateTeam(CommandContext &context, myteams::User &authenticatedUser)
 {
     std::string teamName;
     std::string teamDescription;
@@ -189,7 +162,7 @@ void handleCreateTeam(CommandContext &context, myteams::User &authenticatedUser)
     myteams::Team &createdTeam = context.teams.back();
     createdTeam.addSubscribedUser(std::string(authenticatedUser.getUuid()));
 
-    (void)ServerLogger::logTeamCreated(createdTeam.getUuid(), createdTeam.getName(), authenticatedUser.getUuid());
+    ServerLogger::logTeamCreated(createdTeam.getUuid(), createdTeam.getName(), authenticatedUser.getUuid());
 
     myteams::PayloadRplTeam createdPayload {};
     copyPaddedString(createdPayload.team_uuid, sizeof(createdPayload.team_uuid), createdTeam.getUuid());
@@ -209,34 +182,32 @@ void handleCreateTeam(CommandContext &context, myteams::User &authenticatedUser)
         buildPacket(myteams::EVT_TEAM_CREATED, &eventPayload, sizeof(eventPayload)));
 }
 
-bool resolveContextTeamChannel(
+static std::optional<TeamChannel> resolveContextTeamChannel(
     CommandContext &context,
-    myteams::User &authenticatedUser,
-    myteams::Team *&outTeam,
-    myteams::Channel *&outChannel)
+    const myteams::User &authenticatedUser)
 {
     const std::string teamUuid = context.clientManager.getContextTeamUuid(context.clientFd);
     const std::string channelUuid = context.clientManager.getContextChannelUuid(context.clientFd);
 
-    outTeam = findTeamByUuid(context.teams, teamUuid);
-    if (outTeam == nullptr) {
+    const auto team = findTeamByUuid(context.teams, teamUuid);
+    if (!team.has_value()) {
         queueStatus(context, myteams::ERR_NOT_FOUND);
-        return false;
+        return std::nullopt;
     }
-    if (!outTeam->isUserSubscribed(authenticatedUser.getUuid())) {
+    if (!team->get().isUserSubscribed(authenticatedUser.getUuid())) {
         queueStatus(context, myteams::ERR_UNAUTHORIZED);
-        return false;
+        return std::nullopt;
     }
 
-    outChannel = findChannelByUuid(*outTeam, channelUuid);
-    if (outChannel == nullptr) {
+    const auto channel = findChannelByUuid(team->get(), channelUuid);
+    if (!channel.has_value()) {
         queueStatus(context, myteams::ERR_NOT_FOUND);
-        return false;
+        return std::nullopt;
     }
-    return true;
+    return TeamChannel(*team, *channel);
 }
 
-void handleCreateChannel(CommandContext &context, myteams::User &authenticatedUser)
+static void handleCreateChannel(CommandContext &context, myteams::User &authenticatedUser)
 {
     std::string channelName;
     std::string channelDescription;
@@ -245,20 +216,21 @@ void handleCreateChannel(CommandContext &context, myteams::User &authenticatedUs
     }
 
     const std::string teamUuid = context.clientManager.getContextTeamUuid(context.clientFd);
-    myteams::Team *team = findTeamByUuid(context.teams, teamUuid);
-    if (team == nullptr) {
+    const auto team = findTeamByUuid(context.teams, teamUuid);
+    if (!team.has_value()) {
         queueStatus(context, myteams::ERR_NOT_FOUND);
         return;
     }
-    if (!team->isUserSubscribed(authenticatedUser.getUuid())) {
+    myteams::Team &resolvedTeam = team->get();
+    if (!resolvedTeam.isUserSubscribed(authenticatedUser.getUuid())) {
         queueStatus(context, myteams::ERR_UNAUTHORIZED);
         return;
     }
 
     const std::string channelUuid = generateUniqueChannelUuid(context.teams);
-    team->addChannel(myteams::Channel(channelUuid, channelName, channelDescription));
+    resolvedTeam.addChannel(myteams::Channel(channelUuid, channelName, channelDescription));
 
-    (void)ServerLogger::logChannelCreated(team->getUuid(), channelUuid, channelName);
+    ServerLogger::logChannelCreated(resolvedTeam.getUuid(), channelUuid, channelName);
 
     myteams::PayloadRplChannel createdPayload {};
     copyPaddedString(createdPayload.channel_uuid, sizeof(createdPayload.channel_uuid), channelUuid);
@@ -275,11 +247,11 @@ void handleCreateChannel(CommandContext &context, myteams::User &authenticatedUs
     copyPaddedString(eventPayload.channel_description, sizeof(eventPayload.channel_description), channelDescription);
     queuePacketToTeamSubscribers(
         context,
-        *team,
+        resolvedTeam,
         buildPacket(myteams::EVT_CHANNEL_CREATED, &eventPayload, sizeof(eventPayload)));
 }
 
-void handleCreateThread(CommandContext &context, myteams::User &authenticatedUser)
+static void handleCreateThread(CommandContext &context, myteams::User &authenticatedUser)
 {
     std::string threadTitle;
     std::string threadBody;
@@ -287,17 +259,18 @@ void handleCreateThread(CommandContext &context, myteams::User &authenticatedUse
         return;
     }
 
-    myteams::Team *team = nullptr;
-    myteams::Channel *channel = nullptr;
-    if (!resolveContextTeamChannel(context, authenticatedUser, team, channel)) {
+    const auto teamChannel = resolveContextTeamChannel(context, authenticatedUser);
+    if (!teamChannel.has_value()) {
         return;
     }
+    myteams::Team &team = teamChannel->first.get();
+    myteams::Channel &channel = teamChannel->second.get();
 
     const std::string threadUuid = generateUniqueThreadUuid(context.teams);
     const std::time_t now = std::time(nullptr);
-    channel->addThread(myteams::Thread(threadUuid, std::string(authenticatedUser.getUuid()), now, threadTitle, threadBody));
+    channel.addThread(myteams::Thread(threadUuid, std::string(authenticatedUser.getUuid()), now, threadTitle, threadBody));
 
-    (void)ServerLogger::logThreadCreated(channel->getUuid(), threadUuid, authenticatedUser.getUuid(), threadTitle, threadBody);
+    ServerLogger::logThreadCreated(channel.getUuid(), threadUuid, authenticatedUser.getUuid(), threadTitle, threadBody);
 
     myteams::PayloadRplThread createdPayload {};
     copyPaddedString(createdPayload.thread_uuid, sizeof(createdPayload.thread_uuid), threadUuid);
@@ -318,37 +291,39 @@ void handleCreateThread(CommandContext &context, myteams::User &authenticatedUse
     copyPaddedString(eventPayload.thread_body, sizeof(eventPayload.thread_body), threadBody);
     queuePacketToTeamSubscribers(
         context,
-        *team,
+        team,
         buildPacket(myteams::EVT_THREAD_CREATED, &eventPayload, sizeof(eventPayload)));
 }
 
-void handleCreateReply(CommandContext &context, myteams::User &authenticatedUser)
+static void handleCreateReply(CommandContext &context, myteams::User &authenticatedUser)
 {
     std::string replyBody;
     if (!parseCreateReplyPayload(context, replyBody)) {
         return;
     }
 
-    myteams::Team *team = nullptr;
-    myteams::Channel *channel = nullptr;
-    if (!resolveContextTeamChannel(context, authenticatedUser, team, channel)) {
+    const auto teamChannel = resolveContextTeamChannel(context, authenticatedUser);
+    if (!teamChannel.has_value()) {
         return;
     }
+    myteams::Team &team = teamChannel->first.get();
+    myteams::Channel &channel = teamChannel->second.get();
 
     const std::string threadUuid = context.clientManager.getContextThreadUuid(context.clientFd);
-    myteams::Thread *thread = findThreadByUuid(*channel, threadUuid);
-    if (thread == nullptr) {
+    const auto thread = findThreadByUuid(channel, threadUuid);
+    if (!thread.has_value()) {
         queueStatus(context, myteams::ERR_NOT_FOUND);
         return;
     }
+    myteams::Thread &resolvedThread = thread->get();
 
     const std::time_t now = std::time(nullptr);
-    thread->addReply(myteams::Message(generateUuid(), std::string(authenticatedUser.getUuid()), now, replyBody));
+    resolvedThread.addReply(myteams::Message(generateUuid(), std::string(authenticatedUser.getUuid()), now, replyBody));
 
-    (void)ServerLogger::logReplyCreated(thread->getUuid(), authenticatedUser.getUuid(), replyBody);
+    ServerLogger::logReplyCreated(resolvedThread.getUuid(), authenticatedUser.getUuid(), replyBody);
 
     myteams::PayloadRplReply createdPayload {};
-    copyPaddedString(createdPayload.thread_uuid, sizeof(createdPayload.thread_uuid), thread->getUuid());
+    copyPaddedString(createdPayload.thread_uuid, sizeof(createdPayload.thread_uuid), resolvedThread.getUuid());
     copyPaddedString(createdPayload.user_uuid, sizeof(createdPayload.user_uuid), authenticatedUser.getUuid());
     createdPayload.reply_timestamp = static_cast<std::uint64_t>(now);
     copyPaddedString(createdPayload.reply_body, sizeof(createdPayload.reply_body), replyBody);
@@ -358,25 +333,24 @@ void handleCreateReply(CommandContext &context, myteams::User &authenticatedUser
         buildPacket(myteams::RPL_CREATED, &createdPayload, sizeof(createdPayload)));
 
     myteams::PayloadEvtReplyCreated eventPayload {};
-    copyPaddedString(eventPayload.team_uuid, sizeof(eventPayload.team_uuid), team->getUuid());
-    copyPaddedString(eventPayload.thread_uuid, sizeof(eventPayload.thread_uuid), thread->getUuid());
+    copyPaddedString(eventPayload.team_uuid, sizeof(eventPayload.team_uuid), team.getUuid());
+    copyPaddedString(eventPayload.thread_uuid, sizeof(eventPayload.thread_uuid), resolvedThread.getUuid());
     copyPaddedString(eventPayload.user_uuid, sizeof(eventPayload.user_uuid), authenticatedUser.getUuid());
     copyPaddedString(eventPayload.reply_body, sizeof(eventPayload.reply_body), replyBody);
     queuePacketToTeamSubscribers(
         context,
-        *team,
+        team,
         buildPacket(myteams::EVT_REPLY_CREATED, &eventPayload, sizeof(eventPayload)));
 }
 
-} // namespace
-
 void handleCreateCommand(CommandContext &context)
 {
-    myteams::User *authenticatedUser = getAuthenticatedUser(context);
-    if (authenticatedUser == nullptr) {
+    const auto authenticatedUser = getAuthenticatedUser(context);
+    if (!authenticatedUser.has_value()) {
         queueStatus(context, myteams::ERR_UNAUTHORIZED);
         return;
     }
+    myteams::User &resolvedUser = authenticatedUser->get();
 
     const std::string teamUuid = context.clientManager.getContextTeamUuid(context.clientFd);
     const std::string channelUuid = context.clientManager.getContextChannelUuid(context.clientFd);
@@ -396,18 +370,18 @@ void handleCreateCommand(CommandContext &context)
     }
 
     if (!hasTeam) {
-        handleCreateTeam(context, *authenticatedUser);
+        handleCreateTeam(context, resolvedUser);
         return;
     }
     if (!hasChannel) {
-        handleCreateChannel(context, *authenticatedUser);
+        handleCreateChannel(context, resolvedUser);
         return;
     }
     if (!hasThread) {
-        handleCreateThread(context, *authenticatedUser);
+        handleCreateThread(context, resolvedUser);
         return;
     }
-    handleCreateReply(context, *authenticatedUser);
+    handleCreateReply(context, resolvedUser);
 }
 
 } // namespace server::commands

@@ -4,16 +4,16 @@
 #include "core/exceptions/server_exceptions.hpp"
 
 #include <cerrno>
+#include <string_view>
 
 namespace server::network {
 
 std::int64_t
-Sender::sendBytes(std::int32_t socketFd, const char *buffer, std::size_t bufferSize)
+Sender::sendBytes(std::int32_t socketFd, const std::string_view payload)
 {
 	try {
 		const utils::Socket socket(socketFd);
-		const std::string data(buffer, bufferSize);
-		return static_cast<std::int64_t>(socket.write(data));
+		return static_cast<std::int64_t>(socket.write(std::string(payload)));
 	} catch (const utils::SocketException &exception) {
 		throw SocketSendException(exception.errorNumber());
 	}
@@ -24,11 +24,10 @@ Sender::flushClientData(ClientManager &clientManager, std::int32_t clientFd)
 {
 	if (!clientManager.hasPendingWrite(clientFd))
 		return true;
-	const char *writeData = clientManager.getQueuedData(clientFd);
-	const std::size_t writeSize = clientManager.getQueuedSize(clientFd);
-	if (writeData == nullptr || writeSize == 0)
+	const std::string_view queuedData = clientManager.getQueuedData(clientFd);
+	if (queuedData.empty())
 		return true;
-	const std::int64_t bytesSent = sendBytes(clientFd, writeData, writeSize);
+	const std::int64_t bytesSent = sendBytes(clientFd, queuedData);
 	if (bytesSent <= 0)
 		return false;
 	clientManager.consumeQueuedData(clientFd, static_cast<std::size_t>(bytesSent));

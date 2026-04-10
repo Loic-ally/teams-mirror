@@ -1,4 +1,9 @@
+#ifndef SERVER_MODELS_THREAD_THREAD_HPP
+#define SERVER_MODELS_THREAD_THREAD_HPP
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include <ctime>
 #include <cstring>
@@ -110,3 +115,5 @@ namespace myteams
         std::vector<Message> replies_ {};
     };
 } // namespace myteams
+
+#endif // SERVER_MODELS_THREAD_THREAD_HPP

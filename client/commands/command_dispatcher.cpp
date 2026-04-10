@@ -12,21 +12,18 @@
 
 #include <array>
 #include <algorithm>
+#include <functional>
 #include <iostream>
 #include <string>
+#include <string_view>
+#include <utility>
 
 namespace client::commands {
 
-namespace {
+using CommandHandler = std::function<void(Client &, ParsedInput &)>;
+using CommandEntry = std::pair<std::string_view, CommandHandler>;
 
-using CommandHandler = void (*)(Client &, ParsedInput &);
-
-struct CommandEntry {
-    const char *name;
-    CommandHandler handler;
-};
-
-constexpr std::array<CommandEntry, 10> COMMAND_TABLE {{
+static const std::array<CommandEntry, 10> COMMAND_TABLE {{
     {"/help", &handleHelp},
     {"/info", &handleInfo},
     {"/login", &handleLogin},
@@ -39,8 +36,6 @@ constexpr std::array<CommandEntry, 10> COMMAND_TABLE {{
     {"/subscribed", &handleSubscribedList}
 }};
 
-} // namespace
-
 void dispatchCommand(Client &clientData, ParsedInput &input)
 {
     const std::string &command = input.getCommand();
@@ -52,10 +47,10 @@ void dispatchCommand(Client &clientData, ParsedInput &input)
     const auto entryIt = std::find_if(
         COMMAND_TABLE.begin(),
         COMMAND_TABLE.end(),
-        [&command](const CommandEntry &entry) { return command == entry.name; });
+        [&command](const CommandEntry &entry) { return command == entry.first; });
 
     if (entryIt != COMMAND_TABLE.end()) {
-        entryIt->handler(clientData, input);
+        entryIt->second(clientData, input);
         return;
     }
     std::cout << "Unknown command: " << command << ". Use /help." << std::endl;
