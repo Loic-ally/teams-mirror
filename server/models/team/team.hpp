@@ -55,6 +55,11 @@ namespace myteams
             return channels_;
         }
 
+        std::vector<Channel> &getChannels() noexcept
+        {
+            return channels_;
+        }
+
         void setUuid(const std::string &uuid) noexcept
         {
             copy_buffer(uuid_, uuid);

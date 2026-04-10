@@ -45,6 +45,11 @@ namespace myteams
             return threads_;
         }
 
+        std::vector<Thread> &getThreads() noexcept
+        {
+            return threads_;
+        }
+
         void setUuid(const std::string &uuid) noexcept
         {
             copy_buffer(uuid_, uuid);

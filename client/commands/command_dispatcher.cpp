@@ -2,7 +2,9 @@
 #include "help_command.hpp"
 #include "login_command.hpp"
 #include "logout_command.hpp"
+#include "create_command.hpp"
 #include "subscription_commands.hpp"
+#include "use_command.hpp"
 #include "core/client.hpp"
 #include "parser/parser.hpp"
 
@@ -22,10 +24,12 @@ struct CommandEntry {
     CommandHandler handler;
 };
 
-constexpr std::array<CommandEntry, 6> COMMAND_TABLE {{
+constexpr std::array<CommandEntry, 8> COMMAND_TABLE {{
     {"/help", &handleHelp},
     {"/login", &handleLogin},
     {"/logout", &handleLogout},
+    {"/use", &handleUse},
+    {"/create", &handleCreate},
     {"/subscribe", &handleSubscribe},
     {"/unsubscribe", &handleUnsubscribe},
     {"/subscribed", &handleSubscribedList}
