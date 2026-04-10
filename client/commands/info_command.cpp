@@ -13,12 +13,11 @@
 #include <string>
 
 namespace client::commands {
-namespace {
 
-void handleInfoError(const std::uint16_t code)
+static void handleInfoError(const std::uint16_t code)
 {
     if (code == myteams::ERR_UNAUTHORIZED) {
-        (void)Printer::errorUnauthorized();
+        Printer::errorUnauthorized();
         return;
     }
     if (code == myteams::ERR_NOT_FOUND) {
@@ -33,7 +32,7 @@ void handleInfoError(const std::uint16_t code)
     std::cout << "Server returned unexpected status: " << code << std::endl;
 }
 
-bool parseUserInfoPayload(const std::string &payload)
+static bool parseUserInfoPayload(const std::string &payload)
 {
     if (payload.size() != sizeof(myteams::PayloadRplUser)) {
         std::cout << "Malformed user info payload received from server." << std::endl;
@@ -42,14 +41,14 @@ bool parseUserInfoPayload(const std::string &payload)
 
     myteams::PayloadRplUser userPayload {};
     std::memcpy(&userPayload, payload.data(), sizeof(userPayload));
-    (void)Printer::printUser(
+    Printer::printUser(
         userPayload.user_uuid,
         userPayload.user_name,
         static_cast<int>(userPayload.user_status));
     return true;
 }
 
-bool parseTeamInfoPayload(const std::string &payload)
+static bool parseTeamInfoPayload(const std::string &payload)
 {
     if (payload.size() != sizeof(myteams::PayloadRplTeam)) {
         std::cout << "Malformed team info payload received from server." << std::endl;
@@ -58,14 +57,14 @@ bool parseTeamInfoPayload(const std::string &payload)
 
     myteams::PayloadRplTeam teamPayload {};
     std::memcpy(&teamPayload, payload.data(), sizeof(teamPayload));
-    (void)Printer::printTeam(
+    Printer::printTeam(
         teamPayload.team_uuid,
         teamPayload.team_name,
         teamPayload.team_description);
     return true;
 }
 
-bool parseChannelInfoPayload(const std::string &payload)
+static bool parseChannelInfoPayload(const std::string &payload)
 {
     if (payload.size() != sizeof(myteams::PayloadRplChannel)) {
         std::cout << "Malformed channel info payload received from server." << std::endl;
@@ -74,14 +73,14 @@ bool parseChannelInfoPayload(const std::string &payload)
 
     myteams::PayloadRplChannel channelPayload {};
     std::memcpy(&channelPayload, payload.data(), sizeof(channelPayload));
-    (void)Printer::printChannel(
+    Printer::printChannel(
         channelPayload.channel_uuid,
         channelPayload.channel_name,
         channelPayload.channel_description);
     return true;
 }
 
-bool parseThreadInfoPayload(const std::string &payload)
+static bool parseThreadInfoPayload(const std::string &payload)
 {
     if (payload.size() != sizeof(myteams::PayloadRplThread)) {
         std::cout << "Malformed thread info payload received from server." << std::endl;
@@ -90,7 +89,7 @@ bool parseThreadInfoPayload(const std::string &payload)
 
     myteams::PayloadRplThread threadPayload {};
     std::memcpy(&threadPayload, payload.data(), sizeof(threadPayload));
-    (void)Printer::printThread(
+    Printer::printThread(
         threadPayload.thread_uuid,
         threadPayload.user_uuid,
         static_cast<std::time_t>(threadPayload.thread_timestamp),
@@ -98,8 +97,6 @@ bool parseThreadInfoPayload(const std::string &payload)
         threadPayload.thread_body);
     return true;
 }
-
-} // namespace
 
 void handleInfo(Client &clientData, ParsedInput &input)
 {
@@ -112,22 +109,22 @@ void handleInfo(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
+    readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::RPL_USER_INFO) {
-        (void)parseUserInfoPayload(responsePayload);
+        parseUserInfoPayload(responsePayload);
         return;
     }
     if (responseHeader.code == myteams::RPL_TEAMS_LIST) {
-        (void)parseTeamInfoPayload(responsePayload);
+        parseTeamInfoPayload(responsePayload);
         return;
     }
     if (responseHeader.code == myteams::RPL_CHANNELS_LIST) {
-        (void)parseChannelInfoPayload(responsePayload);
+        parseChannelInfoPayload(responsePayload);
         return;
     }
     if (responseHeader.code == myteams::RPL_THREADS_LIST) {
-        (void)parseThreadInfoPayload(responsePayload);
+        parseThreadInfoPayload(responsePayload);
         return;
     }
 

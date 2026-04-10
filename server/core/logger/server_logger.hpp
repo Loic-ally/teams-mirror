@@ -14,49 +14,49 @@ class ServerLogger {
         ServerLogger() = delete;
         ~ServerLogger() = delete;
 
-        static int logTeamCreated(
+        static void logTeamCreated(
             std::string_view teamUuid,
             std::string_view teamName,
             std::string_view userUuid);
 
-        static int logChannelCreated(
+        static void logChannelCreated(
             std::string_view teamUuid,
             std::string_view channelUuid,
             std::string_view channelName);
 
-        static int logThreadCreated(
+        static void logThreadCreated(
             std::string_view channelUuid,
             std::string_view threadUuid,
             std::string_view userUuid,
             std::string_view threadTitle,
             std::string_view threadBody);
 
-        static int logReplyCreated(
+        static void logReplyCreated(
             std::string_view threadUuid,
             std::string_view userUuid,
             std::string_view replyBody);
 
-        static int logUserSubscribed(
+        static void logUserSubscribed(
             std::string_view teamUuid,
             std::string_view userUuid);
 
-        static int logUserUnsubscribed(
+        static void logUserUnsubscribed(
             std::string_view teamUuid,
             std::string_view userUuid);
 
-        static int logUserCreated(
+        static void logUserCreated(
             std::string_view userUuid,
             std::string_view userName);
 
-        static int logUserLoaded(
+        static void logUserLoaded(
             std::string_view userUuid,
             std::string_view userName);
 
-        static int logUserLoggedIn(std::string_view userUuid);
+        static void logUserLoggedIn(std::string_view userUuid);
 
-        static int logUserLoggedOut(std::string_view userUuid);
+        static void logUserLoggedOut(std::string_view userUuid);
 
-        static int logPrivateMessageSent(
+        static void logPrivateMessageSent(
             std::string_view senderUuid,
             std::string_view receiverUuid,
             std::string_view messageBody);

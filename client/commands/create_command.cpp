@@ -11,7 +11,6 @@
 #include <string>
 
 namespace client::commands {
-namespace {
 
 enum class CreateTarget {
     Team,
@@ -20,7 +19,7 @@ enum class CreateTarget {
     Reply
 };
 
-CreateTarget inferCreateTargetFromContext(const Client &clientData)
+static CreateTarget inferCreateTargetFromContext(const Client &clientData)
 {
     if (clientData.contextTeamUuid.empty()) {
         return CreateTarget::Team;
@@ -34,12 +33,12 @@ CreateTarget inferCreateTargetFromContext(const Client &clientData)
     return CreateTarget::Reply;
 }
 
-void printUnexpectedPayload(const char *message)
+static void printUnexpectedPayload(const char *message)
 {
     std::cout << message << std::endl;
 }
 
-void handleCreatedReply(const CreateTarget target, const std::string &payload)
+static void handleCreatedReply(const CreateTarget target, const std::string &payload)
 {
     if (target == CreateTarget::Team) {
         if (payload.size() != sizeof(myteams::PayloadRplTeam)) {
@@ -48,7 +47,7 @@ void handleCreatedReply(const CreateTarget target, const std::string &payload)
         }
         myteams::PayloadRplTeam createdPayload {};
         std::memcpy(&createdPayload, payload.data(), sizeof(createdPayload));
-        (void)Printer::printTeamCreated(
+        Printer::printTeamCreated(
             createdPayload.team_uuid,
             createdPayload.team_name,
             createdPayload.team_description);
@@ -61,7 +60,7 @@ void handleCreatedReply(const CreateTarget target, const std::string &payload)
         }
         myteams::PayloadRplChannel createdPayload {};
         std::memcpy(&createdPayload, payload.data(), sizeof(createdPayload));
-        (void)Printer::printChannelCreated(
+        Printer::printChannelCreated(
             createdPayload.channel_uuid,
             createdPayload.channel_name,
             createdPayload.channel_description);
@@ -74,7 +73,7 @@ void handleCreatedReply(const CreateTarget target, const std::string &payload)
         }
         myteams::PayloadRplThread createdPayload {};
         std::memcpy(&createdPayload, payload.data(), sizeof(createdPayload));
-        (void)Printer::printThreadCreated(
+        Printer::printThreadCreated(
             createdPayload.thread_uuid,
             createdPayload.user_uuid,
             static_cast<std::time_t>(createdPayload.thread_timestamp),
@@ -89,17 +88,17 @@ void handleCreatedReply(const CreateTarget target, const std::string &payload)
     }
     myteams::PayloadRplReply createdPayload {};
     std::memcpy(&createdPayload, payload.data(), sizeof(createdPayload));
-    (void)Printer::printReplyCreated(
+    Printer::printReplyCreated(
         createdPayload.thread_uuid,
         createdPayload.user_uuid,
         static_cast<std::time_t>(createdPayload.reply_timestamp),
         createdPayload.reply_body);
 }
 
-void handleCreateError(const std::uint16_t code)
+static void handleCreateError(const std::uint16_t code)
 {
     if (code == myteams::ERR_UNAUTHORIZED) {
-        (void)Printer::errorUnauthorized();
+        Printer::errorUnauthorized();
         return;
     }
     if (code == myteams::ERR_NOT_FOUND) {
@@ -112,8 +111,6 @@ void handleCreateError(const std::uint16_t code)
     }
     std::cout << "Server returned unexpected status: " << code << std::endl;
 }
-
-} // namespace
 
 void handleCreate(Client &clientData, ParsedInput &input)
 {
@@ -157,7 +154,7 @@ void handleCreate(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
+    readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::RPL_CREATED) {
         handleCreatedReply(target, responsePayload);

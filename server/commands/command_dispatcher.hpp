@@ -12,10 +12,6 @@
 #include "server/models/team/team.hpp"
 #include "server/models/user/user.hpp"
 
-namespace server {
-class ClientManager;
-}
-
 namespace server::commands {
 
 void processClientIncomingPackets(

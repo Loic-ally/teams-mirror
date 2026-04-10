@@ -11,16 +11,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "common/utils/Socket.hpp"
+#include "server/core/client_manager/client_manager.hpp"
 #include "server/models/team/team.hpp"
 #include "server/models/user/user.hpp"
-
-namespace server {
-class ClientManager;
-}
-
-namespace utils {
-class Socket;
-}
 
 namespace server::commands {
 

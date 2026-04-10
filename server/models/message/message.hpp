@@ -1,4 +1,9 @@
+#ifndef SERVER_MODELS_MESSAGE_MESSAGE_HPP
+#define SERVER_MODELS_MESSAGE_MESSAGE_HPP
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include <ctime>
 #include <cstring>
@@ -84,3 +89,5 @@ namespace myteams
         char body_[MAX_BODY_LENGTH] {};
     };
 } // namespace myteams
+
+#endif // SERVER_MODELS_MESSAGE_MESSAGE_HPP

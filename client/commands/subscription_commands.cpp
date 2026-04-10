@@ -5,51 +5,28 @@
 #include "display/printer.hpp"
 #include "parser/parser.hpp"
 
-#include <cctype>
 #include <cstring>
 #include <iostream>
 #include <string>
 
 namespace client::commands {
-namespace {
 
-bool isUuidFormatValid(const std::string &uuid)
-{
-    if (uuid.size() != myteams::UUID_LENGTH - 1) {
-        return false;
-    }
-    for (std::size_t index = 0; index < uuid.size(); ++index) {
-        if (index == 8 || index == 13 || index == 18 || index == 23) {
-            if (uuid[index] != '-') {
-                return false;
-            }
-            continue;
-        }
-        if (!std::isxdigit(static_cast<unsigned char>(uuid[index]))) {
-            return false;
-        }
-    }
-    return true;
-}
-
-void handleCommonError(std::uint16_t statusCode, const std::string &teamUuid)
+static void handleCommonError(std::uint16_t statusCode, const std::string &teamUuid)
 {
     if (statusCode == myteams::ERR_UNAUTHORIZED) {
-        (void)Printer::errorUnauthorized();
+        Printer::errorUnauthorized();
         return;
     }
     if (statusCode == myteams::ERR_NOT_FOUND) {
-        (void)Printer::errorUnknownTeam(teamUuid);
+        Printer::errorUnknownTeam(teamUuid);
         return;
     }
     if (statusCode == myteams::ERR_ALREADY_EXIST) {
-        (void)Printer::errorAlreadyExist();
+        Printer::errorAlreadyExist();
         return;
     }
     std::cout << "Server returned unexpected status: " << statusCode << std::endl;
 }
-
-} // namespace
 
 void handleSubscribe(Client &clientData, ParsedInput &input)
 {
@@ -71,10 +48,10 @@ void handleSubscribe(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
+    readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::RPL_OK) {
-        (void)Printer::printSubscribed("", teamUuid);
+        Printer::printSubscribed("", teamUuid);
         return;
     }
     handleCommonError(responseHeader.code, teamUuid);
@@ -100,10 +77,10 @@ void handleUnsubscribe(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
+    readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::RPL_OK) {
-        (void)Printer::printUnsubscribed("", teamUuid);
+        Printer::printUnsubscribed("", teamUuid);
         return;
     }
     if (responseHeader.code == myteams::ERR_FORBIDDEN) {
@@ -143,14 +120,14 @@ void handleSubscribedList(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
+    readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::ERR_UNAUTHORIZED) {
-        (void)Printer::errorUnauthorized();
+        Printer::errorUnauthorized();
         return;
     }
     if (responseHeader.code == myteams::ERR_NOT_FOUND) {
-        (void)Printer::errorUnknownTeam(teamUuid);
+        Printer::errorUnknownTeam(teamUuid);
         return;
     }
 
@@ -170,7 +147,7 @@ void handleSubscribedList(Client &clientData, ParsedInput &input)
                 &teamPayload,
                 responsePayload.data() + (index * sizeof(teamPayload)),
                 sizeof(teamPayload));
-            (void)Printer::printTeams(
+            Printer::printTeams(
                 teamPayload.team_uuid,
                 teamPayload.team_name,
                 teamPayload.team_description);
@@ -193,7 +170,7 @@ void handleSubscribedList(Client &clientData, ParsedInput &input)
             &userPayload,
             responsePayload.data() + (index * sizeof(userPayload)),
             sizeof(userPayload));
-        (void)Printer::printUsers(
+        Printer::printUsers(
             userPayload.user_uuid,
             userPayload.user_name,
             static_cast<int>(userPayload.user_status));

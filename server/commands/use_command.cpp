@@ -6,9 +6,8 @@
 #include <string>
 
 namespace server::commands {
-namespace {
 
-bool extractOptionalUuid(const char *rawData, const std::size_t rawSize, std::string &outValue)
+static bool extractOptionalUuid(const char *rawData, const std::size_t rawSize, std::string &outValue)
 {
     if (rawData == nullptr || rawSize == 0) {
         return false;
@@ -22,22 +21,6 @@ bool extractOptionalUuid(const char *rawData, const std::size_t rawSize, std::st
     }
     return isUuidFormatValid(outValue);
 }
-
-bool isContextCombinationValid(
-    const std::string &teamUuid,
-    const std::string &channelUuid,
-    const std::string &threadUuid)
-{
-    if (teamUuid.empty() && (!channelUuid.empty() || !threadUuid.empty())) {
-        return false;
-    }
-    if (channelUuid.empty() && !threadUuid.empty()) {
-        return false;
-    }
-    return true;
-}
-
-} // namespace
 
 void handleUseCommand(CommandContext &context)
 {

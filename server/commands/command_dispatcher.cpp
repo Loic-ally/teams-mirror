@@ -12,18 +12,15 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <functional>
+#include <utility>
 
 namespace server::commands {
-namespace {
 
-using CommandHandler = void (*)(CommandContext &);
+using CommandHandler = std::function<void(CommandContext &)>;
+using CommandHandlerEntry = std::pair<std::uint16_t, CommandHandler>;
 
-struct CommandHandlerEntry {
-    std::uint16_t code;
-    CommandHandler handler;
-};
-
-constexpr std::array<CommandHandlerEntry, 9> COMMAND_HANDLERS {{
+static const std::array<CommandHandlerEntry, 9> COMMAND_HANDLERS {{
     {myteams::CMD_LOGIN, &handleLoginCommand},
     {myteams::CMD_INFO, &handleInfoCommand},
     {myteams::CMD_LOGOUT, &handleLogoutCommand},
@@ -35,21 +32,19 @@ constexpr std::array<CommandHandlerEntry, 9> COMMAND_HANDLERS {{
     {myteams::CMD_SUBSCRIBED_LIST, &handleSubscribedListCommand}
 }};
 
-void dispatchCommand(CommandContext &context, const std::uint16_t commandCode)
+static void dispatchCommand(CommandContext &context, const std::uint16_t commandCode)
 {
     const auto handlerIt = std::find_if(
         COMMAND_HANDLERS.begin(),
         COMMAND_HANDLERS.end(),
-        [commandCode](const CommandHandlerEntry &entry) { return entry.code == commandCode; });
+        [commandCode](const CommandHandlerEntry &entry) { return entry.first == commandCode; });
 
     if (handlerIt == COMMAND_HANDLERS.end()) {
         queueStatus(context, myteams::ERR_BAD_REQUEST);
         return;
     }
-    handlerIt->handler(context);
+    handlerIt->second(context);
 }
-
-} // namespace
 
 void processClientIncomingPackets(
     ClientManager &clientManager,
@@ -59,7 +54,7 @@ void processClientIncomingPackets(
     const ClientSockets &clientSockets,
     AuthenticatedUserByFd &authenticatedUsersByFd)
 {
-    for (;;) {
+    while(true) {
         const std::string &incomingBuffer = clientManager.getIncomingBuffer(clientFd);
         if (incomingBuffer.size() < sizeof(myteams::PacketHeader)) {
             return;

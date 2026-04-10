@@ -7,6 +7,8 @@
 
 #include <filesystem>
 #include <string>
+#include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include "server/models/team/team.hpp"
@@ -31,6 +33,29 @@ struct LoadedTeam {
 	std::vector<std::string> subscribedUsers;
 	std::vector<LoadedChannel> channels;
 };
+
+struct RecordFormat {
+	char delimiter;
+	std::size_t expectedFieldCount;
+	std::string_view sourceName;
+	bool requireFirstField;
+	bool requireSecondField;
+};
+
+struct ChannelPosition {
+	std::size_t teamIndex;
+	std::size_t channelIndex;
+};
+
+struct ThreadPosition {
+	std::size_t teamIndex;
+	std::size_t channelIndex;
+	std::size_t threadIndex;
+};
+
+using TeamIndexes = std::unordered_map<std::string, std::size_t>;
+using ChannelIndexes = std::unordered_map<std::string, ChannelPosition>;
+using ThreadIndexes = std::unordered_map<std::string, ThreadPosition>;
 
 } // namespace detail
 
