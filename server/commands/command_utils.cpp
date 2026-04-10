@@ -2,10 +2,24 @@
 #include "server/core/client_manager/client_manager.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstring>
+#include <functional>
+#include <optional>
 #include <random>
 
 namespace server::commands {
+
+template <typename Container, typename Predicate>
+static auto findByPredicate(Container &container, Predicate predicate)
+    -> std::optional<std::reference_wrapper<typename Container::value_type>>
+{
+    const auto it = std::find_if(container.begin(), container.end(), predicate);
+    if (it == container.end()) {
+        return std::nullopt;
+    }
+    return std::ref(*it);
+}
 
 void copyPaddedString(char *destination, const std::size_t size, const std::string_view source)
 {
@@ -17,21 +31,22 @@ void copyPaddedString(char *destination, const std::size_t size, const std::stri
     destination[copiedLength] = '\0';
 }
 
-std::string buildPacket(const std::uint16_t code, const void *payload, const std::uint16_t payloadSize)
+std::string buildPacket(const std::uint16_t code, const std::string_view payload)
 {
+    const std::uint16_t payloadSize = static_cast<std::uint16_t>(payload.size());
     const myteams::PacketHeader header {code, payloadSize};
     std::string packet(sizeof(header) + payloadSize, '\0');
 
     std::memcpy(packet.data(), &header, sizeof(header));
-    if (payload != nullptr && payloadSize > 0) {
-        std::memcpy(packet.data() + sizeof(header), payload, payloadSize);
+    if (!payload.empty()) {
+        std::memcpy(packet.data() + sizeof(header), payload.data(), payloadSize);
     }
     return packet;
 }
 
 void queuePacket(ClientManager &clientManager, const std::int32_t clientFd, const std::string &packet)
 {
-    clientManager.queueDataToSend(clientFd, packet.data(), packet.size());
+    clientManager.queueDataToSend(clientFd, packet);
 }
 
 void queueStatus(ClientManager &clientManager, const std::int32_t clientFd, const myteams::StatusCode status)
@@ -55,7 +70,7 @@ void broadcastPacket(
         if (socketFd == excludedClientFd) {
             continue;
         }
-        clientManager.queueDataToSend(socketFd, packet.data(), packet.size());
+        clientManager.queueDataToSend(socketFd, packet);
     }
 }
 
@@ -82,24 +97,78 @@ std::string generateUuid()
     return uuid;
 }
 
-myteams::User *findUserByName(std::vector<myteams::User> &users, const std::string_view userName)
+std::optional<UserRef> findUserByName(std::vector<myteams::User> &users, const std::string_view userName)
 {
-    const auto it = std::find_if(users.begin(), users.end(),
+    return findByPredicate(users,
         [userName](const myteams::User &user) { return user.getName() == userName; });
-    if (it == users.end()) {
-        return nullptr;
-    }
-    return &(*it);
 }
 
-myteams::User *findUserByUuid(std::vector<myteams::User> &users, const std::string_view userUuid)
+std::optional<UserRef> findUserByUuid(std::vector<myteams::User> &users, const std::string_view userUuid)
 {
-    const auto it = std::find_if(users.begin(), users.end(),
+    return findByPredicate(users,
         [userUuid](const myteams::User &user) { return user.getUuid() == userUuid; });
-    if (it == users.end()) {
-        return nullptr;
+}
+
+std::optional<TeamRef> findTeamByUuid(std::vector<myteams::Team> &teams, const std::string_view teamUuid)
+{
+    return findByPredicate(teams,
+        [teamUuid](const myteams::Team &team) { return team.getUuid() == teamUuid; });
+}
+
+std::optional<ChannelRef> findChannelByUuid(myteams::Team &team, const std::string_view channelUuid)
+{
+    auto &channels = team.getChannels();
+    return findByPredicate(channels,
+        [channelUuid](const myteams::Channel &channel) { return channel.getUuid() == channelUuid; });
+}
+
+std::optional<ThreadRef> findThreadByUuid(myteams::Channel &channel, const std::string_view threadUuid)
+{
+    auto &threads = channel.getThreads();
+    return findByPredicate(threads,
+        [threadUuid](const myteams::Thread &thread) { return thread.getUuid() == threadUuid; });
+}
+
+std::optional<UserRef> getAuthenticatedUser(CommandContext &context)
+{
+    const auto authenticatedUserIt = context.authenticatedUsersByFd.find(context.clientFd);
+    if (authenticatedUserIt == context.authenticatedUsersByFd.end()) {
+        return std::nullopt;
     }
-    return &(*it);
+    return findUserByUuid(context.users, authenticatedUserIt->second);
+}
+
+bool isUuidFormatValid(const std::string_view uuid)
+{
+    if (uuid.size() != myteams::UUID_LENGTH - 1) {
+        return false;
+    }
+    for (std::size_t index = 0; index < uuid.size(); ++index) {
+        if (index == 8 || index == 13 || index == 18 || index == 23) {
+            if (uuid[index] != '-') {
+                return false;
+            }
+            continue;
+        }
+        if (!std::isxdigit(static_cast<unsigned char>(uuid[index]))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool isContextCombinationValid(
+    const std::string &teamUuid,
+    const std::string &channelUuid,
+    const std::string &threadUuid)
+{
+    if (teamUuid.empty() && (!channelUuid.empty() || !threadUuid.empty())) {
+        return false;
+    }
+    if (channelUuid.empty() && !threadUuid.empty()) {
+        return false;
+    }
+    return true;
 }
 
 bool extractFixedString(const char *rawData, const std::size_t rawSize, std::string &outString)
@@ -107,11 +176,10 @@ bool extractFixedString(const char *rawData, const std::size_t rawSize, std::str
     if (rawData == nullptr || rawSize == 0) {
         return false;
     }
-    const void *nullTerminator = std::memchr(rawData, '\0', rawSize);
-    if (nullTerminator == nullptr) {
+    const auto *end = static_cast<const char *>(std::memchr(rawData, '\0', rawSize));
+    if (end == nullptr) {
         return false;
     }
-    const auto *end = static_cast<const char *>(nullTerminator);
     outString.assign(rawData, static_cast<std::size_t>(end - rawData));
     return true;
 }
@@ -124,7 +192,7 @@ std::string buildUserConnectionEventPacket(
     myteams::PayloadEvtUserConnection payload {};
     copyPaddedString(payload.user_uuid, sizeof(payload.user_uuid), userUuid);
     copyPaddedString(payload.user_name, sizeof(payload.user_name), userName);
-    return buildPacket(static_cast<std::uint16_t>(eventCode), &payload, sizeof(payload));
+    return buildPacket(static_cast<std::uint16_t>(eventCode), payload);
 }
 
 } // namespace server::commands

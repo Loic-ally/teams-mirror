@@ -7,9 +7,7 @@
 
 namespace server::commands {
 
-namespace {
-
-void broadcastLoggedOutEvent(
+static void broadcastLoggedOutEvent(
     ClientManager &clientManager,
     const ClientSockets &clientSockets,
     myteams::User &user,
@@ -19,8 +17,6 @@ void broadcastLoggedOutEvent(
         buildUserConnectionEventPacket(myteams::EVT_LOGGED_OUT, user.getUuid(), user.getName());
     broadcastPacket(clientManager, clientSockets, eventPacket, excludedClientFd);
 }
-
-} // namespace
 
 void handleLogoutCommand(CommandContext &context)
 {
@@ -35,17 +31,18 @@ void handleLogoutCommand(CommandContext &context)
         return;
     }
 
-    myteams::User *user = findUserByUuid(context.users, authenticatedUserIt->second);
+    const auto user = findUserByUuid(context.users, authenticatedUserIt->second);
     context.authenticatedUsersByFd.erase(authenticatedUserIt);
-    if (user == nullptr) {
+    if (!user.has_value()) {
         queueStatus(context, myteams::ERR_UNAUTHORIZED);
         return;
     }
+    myteams::User &resolvedUser = user->get();
 
-    user->setLoggedIn(false);
-    (void)ServerLogger::logUserLoggedOut(user->getUuid());
+    resolvedUser.setLoggedIn(false);
+    ServerLogger::logUserLoggedOut(resolvedUser.getUuid());
     queueStatus(context, myteams::RPL_OK);
-    broadcastLoggedOutEvent(context.clientManager, context.clientSockets, *user);
+    broadcastLoggedOutEvent(context.clientManager, context.clientSockets, resolvedUser);
 }
 
 void handleClientDisconnection(
@@ -59,16 +56,15 @@ void handleClientDisconnection(
     if (authenticatedUserIt == authenticatedUsersByFd.end()) {
         return;
     }
-
-    myteams::User *user = findUserByUuid(users, authenticatedUserIt->second);
+    const auto user = findUserByUuid(users, authenticatedUserIt->second);
     authenticatedUsersByFd.erase(authenticatedUserIt);
-    if (user == nullptr) {
+    if (!user.has_value()) {
         return;
     }
-
-    user->setLoggedIn(false);
-    (void)ServerLogger::logUserLoggedOut(user->getUuid());
-    broadcastLoggedOutEvent(clientManager, clientSockets, *user, clientFd);
+    myteams::User &resolvedUser = user->get();
+    resolvedUser.setLoggedIn(false);
+    ServerLogger::logUserLoggedOut(resolvedUser.getUuid());
+    broadcastLoggedOutEvent(clientManager, clientSockets, resolvedUser, clientFd);
 }
 
 } // namespace server::commands

@@ -39,8 +39,8 @@ void handleUserCommand(CommandContext &context)
         queueStatus(context, myteams::ERR_BAD_REQUEST);
         return;
     }
-    myteams::User *user = findUserByUuid(context.users, requestedUserUuid);
-    if (user == nullptr) {
+    const auto user = findUserByUuid(context.users, requestedUserUuid);
+    if (!user.has_value()) {
         myteams::PayloadErrUnknown errorPayload {};
         copyPaddedString(
             errorPayload.unknown_uuid,
@@ -49,14 +49,14 @@ void handleUserCommand(CommandContext &context)
         queuePacket(
             context.clientManager,
             context.clientFd,
-            buildPacket(myteams::ERR_NOT_FOUND, &errorPayload, sizeof(errorPayload)));
+            buildPacket(myteams::ERR_NOT_FOUND, errorPayload));
         return;
     }
-    const myteams::PayloadRplUser responsePayload = buildUserPayload(*user);
+    const myteams::PayloadRplUser responsePayload = buildUserPayload(user->get());
     queuePacket(
         context.clientManager,
         context.clientFd,
-        buildPacket(myteams::RPL_USER_INFO, &responsePayload, sizeof(responsePayload)));
+        buildPacket(myteams::RPL_USER_INFO, responsePayload));
 }
 
 } // namespace server::commands

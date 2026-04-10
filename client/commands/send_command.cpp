@@ -142,7 +142,7 @@ void handleSend(Client &clientData, ParsedInput &input)
     copyPaddedString(payload.target_uuid, sizeof(payload.target_uuid), targetUuid);
     copyPaddedString(payload.message_body, sizeof(payload.message_body), messageBody);
 
-    const std::string packet = buildPacket(myteams::CMD_SEND, &payload, sizeof(payload));
+    const std::string packet = buildPacket(myteams::CMD_SEND, payload);
     sendPacket(*clientData.socket, packet);
 
     for (;;) {

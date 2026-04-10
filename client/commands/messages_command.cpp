@@ -156,7 +156,7 @@ void handleMessages(Client &clientData, ParsedInput &input)
     myteams::PayloadReqTargetUser payload {};
     copyPaddedString(payload.target_uuid, sizeof(payload.target_uuid), targetUuid);
 
-    const std::string packet = buildPacket(myteams::CMD_MESSAGES, &payload, sizeof(payload));
+    const std::string packet = buildPacket(myteams::CMD_MESSAGES, payload);
     sendPacket(*clientData.socket, packet);
 
     for (;;) {

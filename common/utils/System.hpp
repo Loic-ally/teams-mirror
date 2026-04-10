@@ -1,4 +1,9 @@
+#ifndef COMMON_UTILS_SYSTEM_HPP
+#define COMMON_UTILS_SYSTEM_HPP
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include <stdexcept>
 #include <string>
@@ -25,3 +30,4 @@ class System {
     static int inet_pton(int af, const char *ipStr, unsigned int &ipInt);
 };
 }
+#endif // COMMON_UTILS_SYSTEM_HPP

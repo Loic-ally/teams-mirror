@@ -3,24 +3,29 @@
 #include "parser/parser.hpp"
 
 #include <iostream>
-#include <stdexcept>
 
 namespace client::commands {
 
 void handleHelp(Client &clientData, ParsedInput &input)
 {
     (void)clientData;
+
     if (input.hasRemainingArgs()) {
-        throw std::invalid_argument("Usage: /help");
+        std::cout << "Usage: /help" << std::endl;
+        return;
     }
+
     std::cout
         << "/help: display this help\n"
+        << "/info: display details in current context\n"
         << "/login \"user_name\": log in with a username\n"
         << "/logout: log out from the current session\n"
-        << "/send \"user_uuid\" \"message_body\": send a private message to a user\n"
-        << "/messages \"user_uuid\": list private messages with a user\n"
-        << "/users: list all users\n"
-        << "/user \"user_uuid\": display information about one user"
+        << "/use [\"team_uuid\"] [\"channel_uuid\"] [\"thread_uuid\"]: set context\n"
+        << "/create \"name\" \"description\" or /create \"body\": create by current context\n"
+        << "/list: list entities in current context\n"
+        << "/subscribe \"team_uuid\": subscribe to a team\n"
+        << "/unsubscribe \"team_uuid\": unsubscribe from a team\n"
+        << "/subscribed [\"team_uuid\"]: list subscribed teams or users"
         << std::endl;
 }
 

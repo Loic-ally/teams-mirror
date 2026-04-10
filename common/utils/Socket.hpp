@@ -1,4 +1,9 @@
+#ifndef COMMON_UTILS_SOCKET_HPP
+#define COMMON_UTILS_SOCKET_HPP
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include <cstddef>
 #include <cstdint>
@@ -62,3 +67,5 @@ class SocketClosed : public std::exception {
 };
 
 }
+
+#endif // COMMON_UTILS_SOCKET_HPP
