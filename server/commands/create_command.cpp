@@ -75,7 +75,7 @@ static bool parseCreateTeamPayload(CommandContext &context, std::string &outName
         return false;
     }
     myteams::PayloadReqCreateTeam payload {};
-    std::memcpy(&payload, context.payloadData, sizeof(payload));
+    std::memcpy(&payload, context.payloadData.data(), sizeof(payload));
 
     if (!extractFixedString(payload.team_name, sizeof(payload.team_name), outName)
         || !extractFixedString(payload.team_description, sizeof(payload.team_description), outDescription)
@@ -93,7 +93,7 @@ static bool parseCreateChannelPayload(CommandContext &context, std::string &outN
         return false;
     }
     myteams::PayloadReqCreateChannel payload {};
-    std::memcpy(&payload, context.payloadData, sizeof(payload));
+    std::memcpy(&payload, context.payloadData.data(), sizeof(payload));
 
     if (!extractFixedString(payload.channel_name, sizeof(payload.channel_name), outName)
         || !extractFixedString(payload.channel_description, sizeof(payload.channel_description), outDescription)
@@ -111,7 +111,7 @@ static bool parseCreateThreadPayload(CommandContext &context, std::string &outTi
         return false;
     }
     myteams::PayloadReqCreateThread payload {};
-    std::memcpy(&payload, context.payloadData, sizeof(payload));
+    std::memcpy(&payload, context.payloadData.data(), sizeof(payload));
 
     if (!extractFixedString(payload.thread_title, sizeof(payload.thread_title), outTitle)
         || !extractFixedString(payload.thread_body, sizeof(payload.thread_body), outBody)
@@ -130,7 +130,7 @@ static bool parseCreateReplyPayload(CommandContext &context, std::string &outBod
         return false;
     }
     myteams::PayloadReqCreateReply payload {};
-    std::memcpy(&payload, context.payloadData, sizeof(payload));
+    std::memcpy(&payload, context.payloadData.data(), sizeof(payload));
 
     if (!extractFixedString(payload.reply_body, sizeof(payload.reply_body), outBody) || outBody.empty()) {
         queueStatus(context, myteams::ERR_BAD_REQUEST);

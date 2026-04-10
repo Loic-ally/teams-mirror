@@ -16,7 +16,7 @@ static bool parseTeamUuidFromPayload(CommandContext &context, std::string &outTe
     }
 
     myteams::PayloadReqTeamTarget payload {};
-    std::memcpy(&payload, context.payloadData, sizeof(payload));
+    std::memcpy(&payload, context.payloadData.data(), sizeof(payload));
     if (!extractFixedString(payload.team_uuid, sizeof(payload.team_uuid), outTeamUuid)
         || !isUuidFormatValid(outTeamUuid)) {
         queueStatus(context, myteams::ERR_BAD_REQUEST);

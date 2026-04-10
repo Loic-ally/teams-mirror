@@ -21,16 +21,6 @@ static auto findByPredicate(Container &container, Predicate predicate)
     return std::ref(*it);
 }
 
-void copyPaddedString(char *destination, const std::size_t size, const std::string_view source)
-{
-    if (destination == nullptr || size == 0) {
-        return;
-    }
-    const std::size_t copiedLength = source.size() < (size - 1) ? source.size() : (size - 1);
-    std::memcpy(destination, source.data(), copiedLength);
-    destination[copiedLength] = '\0';
-}
-
 std::string buildPacket(const std::uint16_t code, const std::string_view payload)
 {
     const std::uint16_t payloadSize = static_cast<std::uint16_t>(payload.size());
@@ -171,16 +161,17 @@ bool isContextCombinationValid(
     return true;
 }
 
-bool extractFixedString(const char *rawData, const std::size_t rawSize, std::string &outString)
+bool extractFixedString(const std::string_view rawData, std::string &outString)
 {
-    if (rawData == nullptr || rawSize == 0) {
+    if (rawData.empty()) {
         return false;
     }
-    const auto *end = static_cast<const char *>(std::memchr(rawData, '\0', rawSize));
-    if (end == nullptr) {
+
+    const std::size_t nullPos = rawData.find('\0');
+    if (nullPos == std::string_view::npos) {
         return false;
     }
-    outString.assign(rawData, static_cast<std::size_t>(end - rawData));
+    outString.assign(rawData.substr(0, nullPos));
     return true;
 }
 

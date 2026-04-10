@@ -12,18 +12,14 @@ namespace server {
 constexpr std::string_view USAGE = "USAGE: ./myteams_server port";
 
 bool
-parsePort(const char *arg, std::uint16_t &outPort)
+parsePort(const std::string_view arg, std::uint16_t &outPort)
 {
-    if (arg == nullptr) {
-        return false;
-    }
-    std::string_view portArg(arg);
-    if (portArg.empty()) {
+    if (arg.empty()) {
         return false;
     }
     unsigned long parsedPort = 0;
-    const auto [ptr, ec] = std::from_chars(portArg.begin(), portArg.end(), parsedPort);
-    if (ec != std::errc() || ptr != portArg.end() || parsedPort == 0 || parsedPort > 65535) {
+    const auto [ptr, ec] = std::from_chars(arg.begin(), arg.end(), parsedPort);
+    if (ec != std::errc() || ptr != arg.end() || parsedPort == 0 || parsedPort > 65535) {
         return false;
     }
     outPort = static_cast<std::uint16_t>(parsedPort);

@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -24,7 +25,7 @@ using AuthenticatedUserByFd = std::unordered_map<std::int32_t, std::string>;
 struct CommandContext {
     ClientManager &clientManager;
     std::int32_t clientFd;
-    const char *payloadData;
+    std::string_view payloadData;
     std::uint16_t payloadSize;
     std::vector<myteams::User> &users;
     std::vector<myteams::Team> &teams;

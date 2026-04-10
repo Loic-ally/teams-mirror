@@ -7,6 +7,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <sys/socket.h>
 
 namespace utils {
@@ -27,7 +28,7 @@ class System {
     static int fork();
     static int kill(int pid);
     static int waitpid(int pid, bool block = false);
-    static int inet_pton(int af, const char *ipStr, unsigned int &ipInt);
+    static int inet_pton(int af, std::string_view ipStr, unsigned int &ipInt);
 };
 }
 #endif // COMMON_UTILS_SYSTEM_HPP

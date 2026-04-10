@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <functional>
 #include <optional>
 #include <string>
@@ -25,16 +26,34 @@ using TeamRef = std::reference_wrapper<myteams::Team>;
 using ChannelRef = std::reference_wrapper<myteams::Channel>;
 using ThreadRef = std::reference_wrapper<myteams::Thread>;
 
-void copyPaddedString(char *destination, std::size_t size, std::string_view source);
+template <std::size_t BufferSize>
+void copyPaddedString(char (&destination)[BufferSize], const std::string_view source)
+{
+    if constexpr (BufferSize > 0) {
+        const std::size_t copiedLength = source.size() < (BufferSize - 1) ? source.size() : (BufferSize - 1);
+        std::memcpy(destination, source.data(), copiedLength);
+        destination[copiedLength] = '\0';
+    }
+}
+
+template <std::size_t BufferSize>
+void copyPaddedString(
+    char (&destination)[BufferSize],
+    const std::size_t destinationSize,
+    const std::string_view source)
+{
+    (void)destinationSize;
+    copyPaddedString(destination, source);
+}
 
 std::string buildPacket(std::uint16_t code, std::string_view payload = {});
 
 template <typename PayloadType>
 std::string buildPacket(const std::uint16_t code, const PayloadType &payload)
 {
-    return buildPacket(
-        code,
-        std::string_view(reinterpret_cast<const char *>(&payload), sizeof(PayloadType)));
+    std::string payloadBytes(sizeof(PayloadType), '\0');
+    std::memcpy(payloadBytes.data(), &payload, payloadBytes.size());
+    return buildPacket(code, std::string_view(payloadBytes));
 }
 
 template <typename PayloadType>
@@ -43,11 +62,9 @@ std::string buildPacket(const std::uint16_t code, const std::vector<PayloadType>
     if (payloads.empty()) {
         return buildPacket(code);
     }
-    return buildPacket(
-        code,
-        std::string_view(
-            reinterpret_cast<const char *>(payloads.data()),
-            payloads.size() * sizeof(PayloadType)));
+    std::string payloadBytes(payloads.size() * sizeof(PayloadType), '\0');
+    std::memcpy(payloadBytes.data(), payloads.data(), payloadBytes.size());
+    return buildPacket(code, std::string_view(payloadBytes));
 }
 
 void queuePacket(ClientManager &clientManager, std::int32_t clientFd, const std::string &packet);
@@ -76,7 +93,20 @@ bool isContextCombinationValid(
     const std::string &channelUuid,
     const std::string &threadUuid);
 
-bool extractFixedString(const char *rawData, std::size_t rawSize, std::string &outString);
+bool extractFixedString(std::string_view rawData, std::string &outString);
+
+template <std::size_t BufferSize>
+bool extractFixedString(const char (&rawData)[BufferSize], std::string &outString)
+{
+    return extractFixedString(std::string_view(rawData, BufferSize), outString);
+}
+
+template <std::size_t BufferSize>
+bool extractFixedString(const char (&rawData)[BufferSize], const std::size_t rawSize, std::string &outString)
+{
+    const std::size_t effectiveSize = rawSize < BufferSize ? rawSize : BufferSize;
+    return extractFixedString(std::string_view(rawData, effectiveSize), outString);
+}
 
 std::string buildUserConnectionEventPacket(
     myteams::StatusCode eventCode,

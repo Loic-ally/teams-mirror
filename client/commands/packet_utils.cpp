@@ -24,7 +24,7 @@ static std::string readExact(const utils::Socket &socket, const std::size_t want
     return buffer;
 }
 
-static void printUnexpectedPayload(const char *message)
+static void printUnexpectedPayload(const std::string_view message)
 {
     std::cout << message << std::endl;
 }
@@ -53,19 +53,6 @@ void sendPacket(const utils::Socket &socket, const std::string &packet)
         }
         offset += bytesWritten;
     }
-}
-
-void copyPaddedString(
-    char *destination,
-    const std::size_t size,
-    const std::string &source)
-{
-    if (size == 0) {
-        return;
-    }
-    const std::size_t copiedLength = std::min(source.size(), size - 1);
-    std::memcpy(destination, source.data(), copiedLength);
-    destination[copiedLength] = '\0';
 }
 
 void readServerPacket(

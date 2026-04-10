@@ -29,7 +29,7 @@ void handleUserCommand(CommandContext &context)
         return;
     }
     myteams::PayloadReqTargetUser requestPayload {};
-    std::memcpy(&requestPayload, context.payloadData, sizeof(requestPayload));
+    std::memcpy(&requestPayload, context.payloadData.data(), sizeof(requestPayload));
     std::string requestedUserUuid;
     if (!extractFixedString(
             requestPayload.target_uuid,
