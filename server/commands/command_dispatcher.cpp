@@ -70,7 +70,7 @@ void processClientIncomingPackets(
         CommandContext context {
             clientManager,
             clientFd,
-            incomingBuffer.data() + sizeof(header),
+            std::string_view(incomingBuffer.data() + sizeof(header), header.payload_size),
             header.payload_size,
             users,
             teams,

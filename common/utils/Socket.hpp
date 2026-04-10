@@ -63,7 +63,7 @@ class SocketClosed : public std::exception {
     const char *what() const noexcept;
 
   private:
-    const char *_message;
+    std::string _message;
 };
 
 }

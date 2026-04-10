@@ -33,7 +33,7 @@ static CreateTarget inferCreateTargetFromContext(const Client &clientData)
     return CreateTarget::Reply;
 }
 
-static void printUnexpectedPayload(const char *message)
+static void printUnexpectedPayload(const std::string_view message)
 {
     std::cout << message << std::endl;
 }
@@ -114,6 +114,11 @@ static void handleCreateError(const std::uint16_t code)
 
 void handleCreate(Client &clientData, ParsedInput &input)
 {
+    if (!clientData.connected) {
+        std::cout << "Unauthorized" << std::endl;
+        return;
+    }
+
     const CreateTarget target = inferCreateTargetFromContext(clientData);
 
     if (target == CreateTarget::Reply) {

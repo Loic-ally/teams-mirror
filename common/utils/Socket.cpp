@@ -71,7 +71,7 @@ void Socket::connect(const sockaddr &addr) const {
 
 void Socket::connect(const std::string &adress, int port) const {
     unsigned int addr;
-    System::inet_pton(AF_INET, adress.data(), addr);
+    System::inet_pton(AF_INET, adress, addr);
     sockaddr_in config{};
     config.sin_family = AF_INET;
     config.sin_port = htons(port);
@@ -155,7 +155,7 @@ SocketClosed::SocketClosed() noexcept : _message("socket closed unexpectedly") {
 }
 
 const char *SocketClosed::what() const noexcept {
-    return _message;
+    return _message.c_str();
 }
 
 }

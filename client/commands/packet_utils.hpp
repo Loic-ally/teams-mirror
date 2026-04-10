@@ -10,6 +10,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <string_view>
 
@@ -20,14 +21,32 @@ std::string buildPacket(std::uint16_t code, std::string_view payload = {});
 template <typename PayloadType>
 std::string buildPacket(const std::uint16_t code, const PayloadType &payload)
 {
-    return buildPacket(
-        code,
-        std::string_view(reinterpret_cast<const char *>(&payload), sizeof(PayloadType)));
+    std::string payloadBytes(sizeof(PayloadType), '\0');
+    std::memcpy(payloadBytes.data(), &payload, payloadBytes.size());
+    return buildPacket(code, std::string_view(payloadBytes));
 }
 
 void sendPacket(const utils::Socket &socket, const std::string &packet);
 
-void copyPaddedString(char *destination, std::size_t size, const std::string &source);
+template <std::size_t BufferSize>
+void copyPaddedString(char (&destination)[BufferSize], const std::string_view source)
+{
+    if constexpr (BufferSize > 0) {
+        const std::size_t copiedLength = source.size() < (BufferSize - 1) ? source.size() : (BufferSize - 1);
+        std::memcpy(destination, source.data(), copiedLength);
+        destination[copiedLength] = '\0';
+    }
+}
+
+template <std::size_t BufferSize>
+void copyPaddedString(
+    char (&destination)[BufferSize],
+    const std::size_t destinationSize,
+    const std::string_view source)
+{
+    (void)destinationSize;
+    copyPaddedString(destination, source);
+}
 
 void readServerPacket(
     const utils::Socket &socket,

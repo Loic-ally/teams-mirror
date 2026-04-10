@@ -7,7 +7,8 @@
 
 #include "common/limits.hpp"
 
-#include <cstring>
+#include <algorithm>
+#include <array>
 #include <string>
 #include <string_view>
 
@@ -30,46 +31,43 @@ class Client {
 
         std::string getContextTeamUuid() const noexcept
         {
-            return readUuid(_ctxTeamUuid, sizeof(_ctxTeamUuid));
+            return readUuid(_ctxTeamUuid);
         }
 
         std::string getContextChannelUuid() const noexcept
         {
-            return readUuid(_ctxChannelUuid, sizeof(_ctxChannelUuid));
+            return readUuid(_ctxChannelUuid);
         }
 
         std::string getContextThreadUuid() const noexcept
         {
-            return readUuid(_ctxThreadUuid, sizeof(_ctxThreadUuid));
+            return readUuid(_ctxThreadUuid);
         }
 
     private:
-        static void copyUuid(char *destination, const std::string_view source) noexcept
+        template <std::size_t ArraySize>
+        static void copyUuid(
+            std::array<char, ArraySize> &destination,
+            const std::string_view source) noexcept
         {
-            if (destination == nullptr) {
-                return;
+            destination.fill('\0');
+            if constexpr (ArraySize > 0) {
+                const std::size_t maxLen = ArraySize - 1;
+                const std::size_t copiedLength = source.size() < maxLen ? source.size() : maxLen;
+                std::copy_n(source.data(), copiedLength, destination.data());
             }
-            const std::size_t maxLen = myteams::UUID_LENGTH - 1;
-            const std::size_t copiedLength = source.size() < maxLen ? source.size() : maxLen;
-            std::memcpy(destination, source.data(), copiedLength);
-            destination[copiedLength] = '\0';
         }
 
-        static std::string readUuid(const char *source, const std::size_t size) noexcept
+        template <std::size_t ArraySize>
+        static std::string readUuid(const std::array<char, ArraySize> &source) noexcept
         {
-            if (source == nullptr || size == 0) {
-                return {};
-            }
-            const auto *end = static_cast<const char *>(std::memchr(source, '\0', size));
-            if (end == nullptr) {
-                return {};
-            }
-            return std::string(source, static_cast<std::size_t>(end - source));
+            const auto end = std::find(source.begin(), source.end(), '\0');
+            return std::string(source.begin(), end);
         }
 
-        char _ctxTeamUuid[myteams::UUID_LENGTH] {};
-        char _ctxChannelUuid[myteams::UUID_LENGTH] {};
-        char _ctxThreadUuid[myteams::UUID_LENGTH] {};
+        std::array<char, myteams::UUID_LENGTH> _ctxTeamUuid {};
+        std::array<char, myteams::UUID_LENGTH> _ctxChannelUuid {};
+        std::array<char, myteams::UUID_LENGTH> _ctxThreadUuid {};
 };
 
 } // namespace server

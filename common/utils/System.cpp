@@ -68,8 +68,9 @@ int System::waitpid(int pid, bool block) {
     return res;
 }
 
-int System::inet_pton(int af, const char *ipStr, unsigned int &ipInt) {
-    auto res = ::inet_pton(af, ipStr, &ipInt);
+int System::inet_pton(int af, const std::string_view ipStr, unsigned int &ipInt) {
+    const std::string ipString(ipStr);
+    auto res = ::inet_pton(af, ipString.c_str(), &ipInt);
     if (res <= 0) {
         throw System::SystemException("inet_pton() failed", res == 0 ? EINVAL : errno);
     }

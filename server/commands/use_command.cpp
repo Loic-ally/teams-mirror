@@ -4,19 +4,20 @@
 
 #include <cstring>
 #include <string>
+#include <string_view>
 
 namespace server::commands {
 
-static bool extractOptionalUuid(const char *rawData, const std::size_t rawSize, std::string &outValue)
+static bool extractOptionalUuid(const std::string_view rawData, std::string &outValue)
 {
-    if (rawData == nullptr || rawSize == 0) {
+    if (rawData.empty()) {
         return false;
     }
-    if (rawData[0] == '\0') {
+    if (rawData.front() == '\0') {
         outValue.clear();
         return true;
     }
-    if (!extractFixedString(rawData, rawSize, outValue)) {
+    if (!extractFixedString(rawData, outValue)) {
         return false;
     }
     return isUuidFormatValid(outValue);
@@ -35,14 +36,14 @@ void handleUseCommand(CommandContext &context)
     }
 
     myteams::PayloadReqUse payload {};
-    std::memcpy(&payload, context.payloadData, sizeof(payload));
+    std::memcpy(&payload, context.payloadData.data(), sizeof(payload));
 
     std::string teamUuid;
     std::string channelUuid;
     std::string threadUuid;
-    if (!extractOptionalUuid(payload.team_uuid, sizeof(payload.team_uuid), teamUuid)
-        || !extractOptionalUuid(payload.channel_uuid, sizeof(payload.channel_uuid), channelUuid)
-        || !extractOptionalUuid(payload.thread_uuid, sizeof(payload.thread_uuid), threadUuid)
+    if (!extractOptionalUuid(std::string_view(payload.team_uuid, sizeof(payload.team_uuid)), teamUuid)
+        || !extractOptionalUuid(std::string_view(payload.channel_uuid, sizeof(payload.channel_uuid)), channelUuid)
+        || !extractOptionalUuid(std::string_view(payload.thread_uuid, sizeof(payload.thread_uuid)), threadUuid)
         || !isContextCombinationValid(teamUuid, channelUuid, threadUuid)) {
         queueStatus(context, myteams::ERR_BAD_REQUEST);
         return;

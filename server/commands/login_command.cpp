@@ -18,7 +18,7 @@ void handleLoginCommand(CommandContext &context)
         return;
     }
     myteams::PayloadReqLogin payload {};
-    std::memcpy(&payload, context.payloadData, sizeof(payload));
+    std::memcpy(&payload, context.payloadData.data(), sizeof(payload));
     std::string requestedUserName;
     if (!extractFixedString(payload.user_name, sizeof(payload.user_name), requestedUserName)
         || requestedUserName.empty()) {
