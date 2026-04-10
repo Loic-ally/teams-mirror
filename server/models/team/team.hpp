@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <algorithm>
 #include <cstring>
 #include <string>
 #include <string_view>
@@ -72,6 +73,29 @@ namespace myteams
         void addSubscribedUser(const std::string &user_uuid)
         {
             subscribed_user_uuids_.push_back(make_uuid(user_uuid));
+        }
+
+        bool isUserSubscribed(const std::string_view userUuid) const noexcept
+        {
+            const auto it = std::find_if(
+                subscribed_user_uuids_.begin(),
+                subscribed_user_uuids_.end(),
+                [userUuid](const UserUuid &storedUuid) { return std::string_view(storedUuid.data()) == userUuid; });
+            return it != subscribed_user_uuids_.end();
+        }
+
+        bool removeSubscribedUser(const std::string_view userUuid)
+        {
+            const auto previousSize = subscribed_user_uuids_.size();
+            subscribed_user_uuids_.erase(
+                std::remove_if(
+                    subscribed_user_uuids_.begin(),
+                    subscribed_user_uuids_.end(),
+                    [userUuid](const UserUuid &storedUuid) {
+                        return std::string_view(storedUuid.data()) == userUuid;
+                    }),
+                subscribed_user_uuids_.end());
+            return subscribed_user_uuids_.size() != previousSize;
         }
 
         void addChannel(const Channel &channel)

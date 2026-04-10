@@ -40,6 +40,9 @@ std::string generateUuid();
 
 myteams::User *findUserByName(std::vector<myteams::User> &users, std::string_view userName);
 myteams::User *findUserByUuid(std::vector<myteams::User> &users, std::string_view userUuid);
+myteams::Team *findTeamByUuid(std::vector<myteams::Team> &teams, std::string_view teamUuid);
+
+bool isUuidFormatValid(std::string_view uuid);
 
 bool extractFixedString(const char *rawData, std::size_t rawSize, std::string &outString);
 

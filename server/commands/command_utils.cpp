@@ -2,6 +2,7 @@
 #include "server/core/client_manager/client_manager.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 #include <random>
 
@@ -100,6 +101,37 @@ myteams::User *findUserByUuid(std::vector<myteams::User> &users, const std::stri
         return nullptr;
     }
     return &(*it);
+}
+
+myteams::Team *findTeamByUuid(std::vector<myteams::Team> &teams, const std::string_view teamUuid)
+{
+    const auto it = std::find_if(
+        teams.begin(),
+        teams.end(),
+        [teamUuid](const myteams::Team &team) { return team.getUuid() == teamUuid; });
+    if (it == teams.end()) {
+        return nullptr;
+    }
+    return &(*it);
+}
+
+bool isUuidFormatValid(const std::string_view uuid)
+{
+    if (uuid.size() != myteams::UUID_LENGTH - 1) {
+        return false;
+    }
+    for (std::size_t index = 0; index < uuid.size(); ++index) {
+        if (index == 8 || index == 13 || index == 18 || index == 23) {
+            if (uuid[index] != '-') {
+                return false;
+            }
+            continue;
+        }
+        if (!std::isxdigit(static_cast<unsigned char>(uuid[index]))) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool extractFixedString(const char *rawData, const std::size_t rawSize, std::string &outString)

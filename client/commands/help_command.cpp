@@ -19,7 +19,10 @@ void handleHelp(Client &clientData, ParsedInput &input)
     std::cout
         << "/help: display this help\n"
         << "/login \"user_name\": log in with a username\n"
-        << "/logout: log out from the current session"
+        << "/logout: log out from the current session\n"
+        << "/subscribe \"team_uuid\": subscribe to a team\n"
+        << "/unsubscribe \"team_uuid\": unsubscribe from a team\n"
+        << "/subscribed [\"team_uuid\"]: list subscribed teams or users"
         << std::endl;
 }
 
