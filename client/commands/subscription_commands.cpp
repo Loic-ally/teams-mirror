@@ -32,34 +32,6 @@ bool isUuidFormatValid(const std::string &uuid)
     return true;
 }
 
-std::string readExact(const utils::Socket &socket, const std::size_t wantedSize)
-{
-    std::string buffer;
-    buffer.reserve(wantedSize);
-
-    while (buffer.size() < wantedSize) {
-        const std::string chunk = socket.read(wantedSize - buffer.size());
-        buffer += chunk;
-    }
-    return buffer;
-}
-
-bool readServerPacket(
-    const utils::Socket &socket,
-    myteams::PacketHeader &outHeader,
-    std::string &outPayload)
-{
-    const std::string headerBuffer = readExact(socket, sizeof(myteams::PacketHeader));
-    std::memcpy(&outHeader, headerBuffer.data(), sizeof(outHeader));
-
-    outPayload.clear();
-    if (outHeader.payload_size == 0) {
-        return true;
-    }
-    outPayload = readExact(socket, outHeader.payload_size);
-    return true;
-}
-
 void handleCommonError(std::uint16_t statusCode, const std::string &teamUuid)
 {
     if (statusCode == myteams::ERR_UNAUTHORIZED) {
@@ -99,7 +71,7 @@ void handleSubscribe(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerPacket(*clientData.socket, responseHeader, responsePayload);
+    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::RPL_OK) {
         (void)Printer::printSubscribed("", teamUuid);
@@ -128,7 +100,7 @@ void handleUnsubscribe(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerPacket(*clientData.socket, responseHeader, responsePayload);
+    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::RPL_OK) {
         (void)Printer::printUnsubscribed("", teamUuid);
@@ -171,7 +143,7 @@ void handleSubscribedList(Client &clientData, ParsedInput &input)
 
     myteams::PacketHeader responseHeader {};
     std::string responsePayload;
-    (void)readServerPacket(*clientData.socket, responseHeader, responsePayload);
+    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::ERR_UNAUTHORIZED) {
         (void)Printer::errorUnauthorized();

@@ -9,5 +9,8 @@ namespace client {
             bool running = true;
             bool connected = false;
             std::string username;
+            std::string contextTeamUuid;
+            std::string contextChannelUuid;
+            std::string contextThreadUuid;
     };
 }

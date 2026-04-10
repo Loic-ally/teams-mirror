@@ -5,6 +5,7 @@
 #include "display/printer.hpp"
 #include "parser/parser.hpp"
 
+#include <cstdint>
 #include <iostream>
 #include <string>
 
@@ -34,9 +35,25 @@ void handleLogin(Client &clientData, ParsedInput &input)
         buildPacket(myteams::CMD_LOGIN, &payload, sizeof(payload));
     sendPacket(*clientData.socket, packet);
 
-    clientData.connected = true;
-    clientData.username = username;
-    (void)Printer::eventLoggedIn("", clientData.username);
+    myteams::PacketHeader responseHeader {};
+    std::string responsePayload;
+    (void)readServerReply(*clientData.socket, responseHeader, responsePayload);
+
+    if (responseHeader.code == myteams::RPL_OK) {
+        clientData.connected = true;
+        clientData.username = username;
+        (void)Printer::eventLoggedIn("", clientData.username);
+        return;
+    }
+    if (responseHeader.code == myteams::ERR_ALREADY_EXIST) {
+        (void)Printer::errorAlreadyExist();
+        return;
+    }
+    if (responseHeader.code == myteams::ERR_BAD_REQUEST) {
+        std::cout << "Invalid login request." << std::endl;
+        return;
+    }
+    std::cout << "Server returned unexpected status: " << responseHeader.code << std::endl;
 }
 
 }

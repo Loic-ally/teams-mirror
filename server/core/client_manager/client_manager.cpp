@@ -5,7 +5,7 @@ namespace server {
 void
 ClientManager::addClient(std::int32_t socketFd)
 {
-	_clients.emplace(socketFd, ClientState {});
+	_clients.emplace(socketFd, Client {});
 }
 
 void
@@ -108,6 +108,50 @@ ClientManager::consumeQueuedData(std::int32_t socketFd, std::size_t consumedByte
 		return;
 	}
 	outgoingBuffer.erase(0, consumedBytes);
+}
+
+void
+ClientManager::setContext(
+	std::int32_t socketFd,
+	const std::string_view teamUuid,
+	const std::string_view channelUuid,
+	const std::string_view threadUuid) noexcept
+{
+	auto it = _clients.find(socketFd);
+	if (it == _clients.end()) {
+		return;
+	}
+	it->second.setContext(teamUuid, channelUuid, threadUuid);
+}
+
+std::string
+ClientManager::getContextTeamUuid(std::int32_t socketFd) const noexcept
+{
+	auto it = _clients.find(socketFd);
+	if (it == _clients.end()) {
+		return {};
+	}
+	return it->second.getContextTeamUuid();
+}
+
+std::string
+ClientManager::getContextChannelUuid(std::int32_t socketFd) const noexcept
+{
+	auto it = _clients.find(socketFd);
+	if (it == _clients.end()) {
+		return {};
+	}
+	return it->second.getContextChannelUuid();
+}
+
+std::string
+ClientManager::getContextThreadUuid(std::int32_t socketFd) const noexcept
+{
+	auto it = _clients.find(socketFd);
+	if (it == _clients.end()) {
+		return {};
+	}
+	return it->second.getContextThreadUuid();
 }
 
 } // namespace server
