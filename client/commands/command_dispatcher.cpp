@@ -1,5 +1,6 @@
 #include "command_dispatcher.hpp"
 #include "help_command.hpp"
+#include "list_command.hpp"
 #include "login_command.hpp"
 #include "logout_command.hpp"
 #include "create_command.hpp"
@@ -24,12 +25,13 @@ struct CommandEntry {
     CommandHandler handler;
 };
 
-constexpr std::array<CommandEntry, 8> COMMAND_TABLE {{
+constexpr std::array<CommandEntry, 9> COMMAND_TABLE {{
     {"/help", &handleHelp},
     {"/login", &handleLogin},
     {"/logout", &handleLogout},
     {"/use", &handleUse},
     {"/create", &handleCreate},
+    {"/list", &handleList},
     {"/subscribe", &handleSubscribe},
     {"/unsubscribe", &handleUnsubscribe},
     {"/subscribed", &handleSubscribedList}

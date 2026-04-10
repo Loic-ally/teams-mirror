@@ -33,6 +33,7 @@ void handleHelp(Client &clientData, ParsedInput &input)
         << "/logout: log out from the current session\n"
         << "/use [\"team_uuid\"] [\"channel_uuid\"] [\"thread_uuid\"]: set context\n"
         << "/create \"name\" \"description\" or /create \"body\": create by current context\n"
+        << "/list: list entities in current context\n"
         << "/subscribe \"team_uuid\": subscribe to a team\n"
         << "/unsubscribe \"team_uuid\": unsubscribe from a team\n"
         << "/subscribed [\"team_uuid\"]: list subscribed teams or users"
