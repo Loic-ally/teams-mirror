@@ -1,7 +1,8 @@
 #include "server/commands/command_dispatcher.hpp"
 #include "server/commands/command_utils.hpp"
 #include "server/commands/create_command.hpp"
-#include "server/commands/help_command.hpp"
+#include "server/commands/info_command.hpp"
+#include "server/commands/list_command.hpp"
 #include "server/commands/login_command.hpp"
 #include "server/commands/logout_command.hpp"
 #include "server/commands/subscription_commands.hpp"
@@ -22,15 +23,16 @@ struct CommandHandlerEntry {
     CommandHandler handler;
 };
 
-constexpr std::array<CommandHandlerEntry, 8> COMMAND_HANDLERS {{
+constexpr std::array<CommandHandlerEntry, 9> COMMAND_HANDLERS {{
     {myteams::CMD_LOGIN, &handleLoginCommand},
+    {myteams::CMD_INFO, &handleInfoCommand},
     {myteams::CMD_LOGOUT, &handleLogoutCommand},
     {myteams::CMD_USE, &handleUseCommand},
     {myteams::CMD_CREATE, &handleCreateCommand},
+    {myteams::CMD_LIST, &handleListCommand},
     {myteams::CMD_SUBSCRIBE, &handleSubscribeCommand},
     {myteams::CMD_UNSUBSCRIBE, &handleUnsubscribeCommand},
-    {myteams::CMD_SUBSCRIBED_LIST, &handleSubscribedListCommand},
-    {myteams::CMD_INFO, &handleHelpCommand}
+    {myteams::CMD_SUBSCRIBED_LIST, &handleSubscribedListCommand}
 }};
 
 void dispatchCommand(CommandContext &context, const std::uint16_t commandCode)
