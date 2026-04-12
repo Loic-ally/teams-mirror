@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -61,6 +62,10 @@ std::string buildPacket(const std::uint16_t code, const std::vector<PayloadType>
 {
     if (payloads.empty()) {
         return buildPacket(code);
+    }
+    constexpr std::size_t MAX_PACKET_PAYLOAD_SIZE = std::numeric_limits<std::uint16_t>::max();
+    if (payloads.size() > (MAX_PACKET_PAYLOAD_SIZE / sizeof(PayloadType))) {
+        return buildPacket(static_cast<std::uint16_t>(myteams::ERR_SERVER_INTERNAL));
     }
     std::string payloadBytes(payloads.size() * sizeof(PayloadType), '\0');
     std::memcpy(payloadBytes.data(), payloads.data(), payloadBytes.size());

@@ -7,6 +7,8 @@
 #include "create_command.hpp"
 #include "subscription_commands.hpp"
 #include "use_command.hpp"
+#include "user_command.hpp"
+#include "users_command.hpp"
 #include "core/client.hpp"
 #include "parser/parser.hpp"
 
@@ -23,7 +25,7 @@ namespace client::commands {
 using CommandHandler = std::function<void(Client &, ParsedInput &)>;
 using CommandEntry = std::pair<std::string_view, CommandHandler>;
 
-static const std::array<CommandEntry, 10> COMMAND_TABLE {{
+static const std::array<CommandEntry, 12> COMMAND_TABLE {{
     {"/help", &handleHelp},
     {"/info", &handleInfo},
     {"/login", &handleLogin},
@@ -33,7 +35,9 @@ static const std::array<CommandEntry, 10> COMMAND_TABLE {{
     {"/list", &handleList},
     {"/subscribe", &handleSubscribe},
     {"/unsubscribe", &handleUnsubscribe},
-    {"/subscribed", &handleSubscribedList}
+    {"/subscribed", &handleSubscribedList},
+    {"/user", &handleUser},
+    {"/users", &handleUsers}
 }};
 
 void dispatchCommand(Client &clientData, ParsedInput &input)

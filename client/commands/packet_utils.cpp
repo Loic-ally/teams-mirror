@@ -3,22 +3,36 @@
 #include "display/printer.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cctype>
 #include <ctime>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 namespace client::commands {
 
 static std::string readExact(const utils::Socket &socket, const std::size_t wantedSize)
 {
+    constexpr auto EMPTY_READ_BACKOFF = std::chrono::milliseconds(2);
+    constexpr std::size_t MAX_CONSECUTIVE_EMPTY_READS = 2500;
     std::string buffer;
+    std::size_t consecutiveEmptyReads = 0;
     buffer.reserve(wantedSize);
-
     while (buffer.size() < wantedSize) {
         const std::string chunk = socket.read(wantedSize - buffer.size());
+        if (chunk.empty()) {
+            ++consecutiveEmptyReads;
+            if (consecutiveEmptyReads >= MAX_CONSECUTIVE_EMPTY_READS) {
+                throw std::runtime_error("timed out waiting for server data");
+            }
+            std::this_thread::sleep_for(EMPTY_READ_BACKOFF);
+            continue;
+        }
+        consecutiveEmptyReads = 0;
         buffer += chunk;
     }
     return buffer;
@@ -31,6 +45,10 @@ static void printUnexpectedPayload(const std::string_view message)
 
 std::string buildPacket(const std::uint16_t code, const std::string_view payload)
 {
+    constexpr std::size_t MAX_PACKET_PAYLOAD_SIZE = std::numeric_limits<std::uint16_t>::max();
+    if (payload.size() > MAX_PACKET_PAYLOAD_SIZE) {
+        throw std::length_error("packet payload too large for protocol header");
+    }
     const std::uint16_t payloadSize = static_cast<std::uint16_t>(payload.size());
     const myteams::PacketHeader header {code, payloadSize};
     std::string packet(sizeof(header) + payloadSize, '\0');

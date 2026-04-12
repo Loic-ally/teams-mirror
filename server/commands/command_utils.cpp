@@ -5,6 +5,7 @@
 #include <cctype>
 #include <cstring>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <random>
 
@@ -23,6 +24,10 @@ static auto findByPredicate(Container &container, Predicate predicate)
 
 std::string buildPacket(const std::uint16_t code, const std::string_view payload)
 {
+    constexpr std::size_t MAX_PACKET_PAYLOAD_SIZE = std::numeric_limits<std::uint16_t>::max();
+    if (payload.size() > MAX_PACKET_PAYLOAD_SIZE) {
+        return buildPacket(static_cast<std::uint16_t>(myteams::ERR_SERVER_INTERNAL));
+    }
     const std::uint16_t payloadSize = static_cast<std::uint16_t>(payload.size());
     const myteams::PacketHeader header {code, payloadSize};
     std::string packet(sizeof(header) + payloadSize, '\0');
