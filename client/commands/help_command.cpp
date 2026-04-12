@@ -23,6 +23,8 @@ void handleHelp(Client &clientData, ParsedInput &input)
         << "/use [\"team_uuid\"] [\"channel_uuid\"] [\"thread_uuid\"]: set context\n"
         << "/create \"name\" \"description\" or /create \"body\": create by current context\n"
         << "/list: list entities in current context\n"
+        << "/user \"user_uuid\": display a user's details\n"
+        << "/users: list users\n"
         << "/subscribe \"team_uuid\": subscribe to a team\n"
         << "/unsubscribe \"team_uuid\": unsubscribe from a team\n"
         << "/subscribed [\"team_uuid\"]: list subscribed teams or users"
