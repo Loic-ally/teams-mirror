@@ -20,60 +20,11 @@ struct ReceivedPacket {
     std::string payload;
 };
 
-std::string readExact(const utils::Socket &socket, const std::size_t expectedSize)
-{
-    std::string buffer;
-    buffer.reserve(expectedSize);
-
-    while (buffer.size() < expectedSize) {
-        const std::string chunk = socket.read(expectedSize - buffer.size());
-        if (chunk.empty()) {
-            continue;
-        }
-        buffer.append(chunk);
-    }
-    return buffer;
-}
-
-ReceivedPacket readPacket(const utils::Socket &socket)
-{
-    ReceivedPacket packet;
-    const std::string rawHeader = readExact(socket, sizeof(myteams::PacketHeader));
-    std::memcpy(&packet.header, rawHeader.data(), sizeof(packet.header));
-    packet.payload = readExact(socket, packet.header.payload_size);
-    return packet;
-}
-
-bool isEventCode(const std::uint16_t code)
-{
-    return code >= myteams::EVT_LOGGED_IN && code <= myteams::EVT_REPLY_CREATED;
-}
-
-void dispatchEventPacket(const ReceivedPacket &packet)
-{
-    if (packet.header.code == myteams::EVT_LOGGED_IN || packet.header.code == myteams::EVT_LOGGED_OUT) {
-        if (packet.payload.size() != sizeof(myteams::PayloadEvtUserConnection)) {
-            throw std::runtime_error("invalid user connection event payload size");
-        }
-        myteams::PayloadEvtUserConnection eventPayload {};
-        std::memcpy(&eventPayload, packet.payload.data(), sizeof(eventPayload));
-        if (packet.header.code == myteams::EVT_LOGGED_IN) {
-            (void)Printer::eventLoggedIn(eventPayload.user_uuid, eventPayload.user_name);
-        } else {
-            (void)Printer::eventLoggedOut(eventPayload.user_uuid, eventPayload.user_name);
-        }
-    }
-}
-
 ReceivedPacket readReplySkippingEvents(const utils::Socket &socket)
 {
-    for (;;) {
-        ReceivedPacket packet = readPacket(socket);
-        if (!isEventCode(packet.header.code)) {
-            return packet;
-        }
-        dispatchEventPacket(packet);
-    }
+    ReceivedPacket packet;
+    readServerReply(socket, packet.header, packet.payload);
+    return packet;
 }
 
 bool isHexCharacter(const char character)

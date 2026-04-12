@@ -6,6 +6,8 @@
 #include "server/commands/login_command.hpp"
 #include "server/commands/logout_command.hpp"
 #include "server/commands/subscription_commands.hpp"
+#include "server/commands/user_command.hpp"
+#include "server/commands/users_command.hpp"
 #include "server/commands/use_command.hpp"
 #include "server/core/client_manager/client_manager.hpp"
 
@@ -20,8 +22,10 @@ namespace server::commands {
 using CommandHandler = std::function<void(CommandContext &)>;
 using CommandHandlerEntry = std::pair<std::uint16_t, CommandHandler>;
 
-static const std::array<CommandHandlerEntry, 9> COMMAND_HANDLERS {{
+static const std::array<CommandHandlerEntry, 11> COMMAND_HANDLERS {{
     {myteams::CMD_LOGIN, &handleLoginCommand},
+    {myteams::CMD_USERS, &handleUsersCommand},
+    {myteams::CMD_USER_INFO, &handleUserCommand},
     {myteams::CMD_INFO, &handleInfoCommand},
     {myteams::CMD_LOGOUT, &handleLogoutCommand},
     {myteams::CMD_USE, &handleUseCommand},
