@@ -10,6 +10,13 @@
 
 namespace client::commands {
 
+enum CreateTarget {
+    Team,
+    Channel,
+    Thread,
+    Reply
+};
+
 void handleCreate(Client &clientData, ParsedInput &input);
 
 } // namespace client::commands

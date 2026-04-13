@@ -12,13 +12,6 @@
 
 namespace client::commands {
 
-enum CreateTarget {
-    Team,
-    Channel,
-    Thread,
-    Reply
-};
-
 static CreateTarget inferCreateTargetFromContext(const Client &clientData)
 {
     if (clientData.contextTeamUuid.empty()) {
