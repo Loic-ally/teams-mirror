@@ -4,10 +4,9 @@
 #ifdef _WIN32
 #pragma once
 #endif
-namespace client {
-class Client;
-class ParsedInput;
-}
+
+#include "client/core/client.hpp"
+#include "client/parser/parser.hpp"
 
 namespace client::commands {
 

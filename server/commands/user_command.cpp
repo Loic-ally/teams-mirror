@@ -5,7 +5,7 @@
 
 namespace server::commands {
 
-namespace {
+namespace user_command_detail {
 
 myteams::PayloadRplUser buildUserPayload(const myteams::User &user)
 {
@@ -16,7 +16,7 @@ myteams::PayloadRplUser buildUserPayload(const myteams::User &user)
     return payload;
 }
 
-} // namespace
+} // namespace user_command_detail
 
 void handleUserCommand(CommandContext &context)
 {
@@ -52,7 +52,7 @@ void handleUserCommand(CommandContext &context)
             buildPacket(myteams::ERR_NOT_FOUND, errorPayload));
         return;
     }
-    const myteams::PayloadRplUser responsePayload = buildUserPayload(user->get());
+    const myteams::PayloadRplUser responsePayload = user_command_detail::buildUserPayload(user->get());
     queuePacket(
         context.clientManager,
         context.clientFd,

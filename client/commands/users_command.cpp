@@ -11,7 +11,7 @@
 #include <string>
 
 namespace client::commands {
-namespace {
+namespace users_command_detail {
 
 struct ReceivedPacket {
     myteams::PacketHeader header {};
@@ -37,14 +37,14 @@ void printUsersList(const std::string &payload)
             &userPayload,
             payload.data() + (index * sizeof(myteams::PayloadRplUser)),
             sizeof(userPayload));
-        (void)Printer::printUsers(
+        Printer::printUsers(
             userPayload.user_uuid,
             userPayload.user_name,
             static_cast<int>(userPayload.user_status));
     }
 }
 
-} // namespace
+} // namespace users_command_detail
 
 void handleUsers(Client &clientData, ParsedInput &input)
 {
@@ -54,16 +54,16 @@ void handleUsers(Client &clientData, ParsedInput &input)
     const std::string packet = buildPacket(myteams::CMD_USERS);
     sendPacket(*clientData.socket, packet);
     for (;;) {
-        const ReceivedPacket reply = readReplySkippingEvents(*clientData.socket);
+        const auto reply = users_command_detail::readReplySkippingEvents(*clientData.socket);
         if (reply.header.code == myteams::RPL_OK) {
             continue;
         }
         if (reply.header.code == myteams::RPL_USERS_LIST) {
-            printUsersList(reply.payload);
+            users_command_detail::printUsersList(reply.payload);
             return;
         }
         if (reply.header.code == myteams::ERR_UNAUTHORIZED) {
-            (void)Printer::errorUnauthorized();
+            Printer::errorUnauthorized();
             throw std::runtime_error("Unauthorized: you must be logged in to use /users");
         }
         if (reply.header.code == myteams::ERR_BAD_REQUEST) {

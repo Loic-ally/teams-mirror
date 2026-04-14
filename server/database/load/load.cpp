@@ -4,6 +4,7 @@
 #include <charconv>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -360,18 +361,18 @@ DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Tea
 	std::vector<std::string> channelLines;
 	std::vector<std::string> threadLines;
 	std::vector<std::string> messageLines;
-	using FileLines = std::pair<std::filesystem::path, std::vector<std::string> *>;
+	using FileLines = std::pair<std::filesystem::path, std::reference_wrapper<std::vector<std::string>>>;
 	std::array<FileLines, 6> sourceFiles {{
-		{usersFilePath(), &userLines},
-		{teamsFilePath(), &teamLines},
-		{teamSubscriptionsFilePath(), &teamSubscriptionLines},
-		{channelsFilePath(), &channelLines},
-		{threadsFilePath(), &threadLines},
-		{messagesFilePath(), &messageLines}
+		{usersFilePath(), userLines},
+		{teamsFilePath(), teamLines},
+		{teamSubscriptionsFilePath(), teamSubscriptionLines},
+		{channelsFilePath(), channelLines},
+		{threadsFilePath(), threadLines},
+		{messagesFilePath(), messageLines}
 	}};
 	bool hasSavedData = false;
 	for (FileLines &file : sourceFiles)
-		hasSavedData = readTextFile(file.first, *file.second) || hasSavedData;
+		hasSavedData = readTextFile(file.first, file.second.get()) || hasSavedData;
 	if (!hasSavedData) {
 		std::cout << "No saved database found. Starting with an empty state." << std::endl;
 		return false;

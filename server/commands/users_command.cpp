@@ -5,7 +5,7 @@
 
 namespace server::commands {
 
-namespace {
+namespace users_command_detail {
 
 myteams::PayloadRplUser buildUserPayload(const myteams::User &user)
 {
@@ -16,7 +16,7 @@ myteams::PayloadRplUser buildUserPayload(const myteams::User &user)
     return payload;
 }
 
-} // namespace
+} // namespace users_command_detail
 
 void handleUsersCommand(CommandContext &context)
 {
@@ -31,7 +31,7 @@ void handleUsersCommand(CommandContext &context)
     std::vector<myteams::PayloadRplUser> usersPayload;
     usersPayload.reserve(context.users.size());
     for (const myteams::User &user : context.users) {
-        usersPayload.push_back(buildUserPayload(user));
+        usersPayload.push_back(users_command_detail::buildUserPayload(user));
     }
     queuePacket(
         context.clientManager,

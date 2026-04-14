@@ -13,7 +13,7 @@
 #include <string>
 
 namespace client::commands {
-namespace {
+namespace user_command_detail {
 
 struct ReceivedPacket {
     myteams::PacketHeader header {};
@@ -60,7 +60,7 @@ void printUserReply(const std::string &payload)
 
     myteams::PayloadRplUser userPayload {};
     std::memcpy(&userPayload, payload.data(), sizeof(userPayload));
-    (void)Printer::printUser(
+    Printer::printUser(
         userPayload.user_uuid,
         userPayload.user_name,
         static_cast<int>(userPayload.user_status));
@@ -74,10 +74,10 @@ void printUnknownUserError(const std::string &payload)
 
     myteams::PayloadErrUnknown errorPayload {};
     std::memcpy(&errorPayload, payload.data(), sizeof(errorPayload));
-    (void)Printer::errorUnknownUser(errorPayload.unknown_uuid);
+    Printer::errorUnknownUser(errorPayload.unknown_uuid);
 }
 
-} // namespace
+} // namespace user_command_detail
 
 void handleUser(Client &clientData, ParsedInput &input)
 {
@@ -85,7 +85,7 @@ void handleUser(Client &clientData, ParsedInput &input)
     if (input.fail() || input.hasRemainingArgs()) {
         throw std::invalid_argument("Usage: /user \"user_uuid\"");
     }
-    if (!isValidUuid(targetUuid)) {
+    if (!user_command_detail::isValidUuid(targetUuid)) {
         throw std::invalid_argument("Invalid UUID format.");
     }
 
@@ -96,20 +96,20 @@ void handleUser(Client &clientData, ParsedInput &input)
     sendPacket(*clientData.socket, packet);
 
     for (;;) {
-        const ReceivedPacket reply = readReplySkippingEvents(*clientData.socket);
+        const auto reply = user_command_detail::readReplySkippingEvents(*clientData.socket);
         if (reply.header.code == myteams::RPL_OK) {
             continue;
         }
         if (reply.header.code == myteams::RPL_USER_INFO) {
-            printUserReply(reply.payload);
+            user_command_detail::printUserReply(reply.payload);
             return;
         }
         if (reply.header.code == myteams::ERR_NOT_FOUND) {
-            printUnknownUserError(reply.payload);
+            user_command_detail::printUnknownUserError(reply.payload);
             throw std::runtime_error("Unknown user UUID");
         }
         if (reply.header.code == myteams::ERR_UNAUTHORIZED) {
-            (void)Printer::errorUnauthorized();
+            Printer::errorUnauthorized();
             throw std::runtime_error("Unauthorized: you must be logged in to use /user");
         }
         if (reply.header.code == myteams::ERR_BAD_REQUEST) {
