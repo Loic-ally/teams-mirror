@@ -26,12 +26,14 @@ namespace myteams
             const std::string &uuid,
             const std::string &author_uuid,
             std::time_t created_at,
-            const std::string &body)
+            const std::string &body,
+            const std::string &receiver_uuid = "")
             : created_at_(created_at)
         {
             copy_buffer(uuid_, uuid);
             copy_buffer(author_uuid_, author_uuid);
             copy_buffer(body_, body);
+            copy_buffer(receiver_uuid_, receiver_uuid);
         }
 
         std::string_view getUuid() const noexcept
@@ -42,6 +44,11 @@ namespace myteams
         std::string_view getAuthorUuid() const noexcept
         {
             return author_uuid_;
+        }
+
+        std::string_view getReceiverUuid() const noexcept
+        {
+            return receiver_uuid_;
         }
 
         std::time_t getCreatedAt() const noexcept
@@ -62,6 +69,11 @@ namespace myteams
         void setAuthorUuid(const std::string &author_uuid) noexcept
         {
             copy_buffer(author_uuid_, author_uuid);
+        }
+
+        void setReceiverUuid(const std::string &receiver_uuid) noexcept
+        {
+            copy_buffer(receiver_uuid_, receiver_uuid);
         }
 
         void setCreatedAt(std::time_t created_at) noexcept
@@ -85,6 +97,7 @@ namespace myteams
 
         char uuid_[UUID_LENGTH] {};
         char author_uuid_[UUID_LENGTH] {};
+        char receiver_uuid_[UUID_LENGTH] {};
         std::time_t created_at_ {};
         char body_[MAX_BODY_LENGTH] {};
     };

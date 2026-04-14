@@ -1,4 +1,5 @@
 #include "load.hpp"
+#include "models/message/message.hpp"
 
 #include <array>
 #include <charconv>
@@ -18,6 +19,7 @@ static constexpr std::size_t TEAM_SUBSCRIPTION_FIELD_COUNT = 2;
 static constexpr std::size_t CHANNEL_FIELD_COUNT = 4;
 static constexpr std::size_t THREAD_FIELD_COUNT = 6;
 static constexpr std::size_t MESSAGE_FIELD_COUNT = 5;
+static constexpr std::size_t PRIVATE_MESSAGE_FIELD_COUNT = 6;
 
 static std::vector<std::string>
 splitEscapedLine(const std::string &line, char delimiter)
@@ -146,6 +148,30 @@ loadUsers(const std::vector<std::string> &userLines, char delimiter, std::vector
 		if (!parseRecord(line, userFormat, fields))
 			continue;
 		users.emplace_back(fields.at(0), fields.at(1), parseBoolValue(fields.at(2)));
+	}
+}
+
+static void
+loadPrivateMessages(const std::vector<std::string> &privateMessageLines, char delimiter, std::vector<myteams::Message> &messages)
+{
+	std::vector<std::string> fields;
+	const RecordFormat messageFormat { delimiter, PRIVATE_MESSAGE_FIELD_COUNT, "privateMessage", true, true };
+	for (const std::string &line : privateMessageLines) {
+		if (line.empty())
+			continue;
+		if (!parseRecord(line, messageFormat, fields))
+			continue;
+		std::time_t createdAt = 0;
+		if (!parseTimeValue(fields.at(3), createdAt)) {
+			std::cerr << "Skipping message with invalid timestamp: " << line << std::endl;
+			continue;
+		}
+		messages.emplace_back(
+			fields.at(1),
+			fields.at(2),
+			createdAt,
+			fields.at(4),
+            fields.at(5));
 	}
 }
 
@@ -351,7 +377,7 @@ DatabaseLoader::DatabaseLoader(std::filesystem::path baseDirectory, char delimit
 }
 
 bool
-DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Team> &teams) const
+DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Team> &teams, std::vector<myteams::Message> &messages) const
 {
 	users.clear();
 	teams.clear();
@@ -361,14 +387,16 @@ DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Tea
 	std::vector<std::string> channelLines;
 	std::vector<std::string> threadLines;
 	std::vector<std::string> messageLines;
+	std::vector<std::string> privateMessageLines;
 	using FileLines = std::pair<std::filesystem::path, std::reference_wrapper<std::vector<std::string>>>;
-	std::array<FileLines, 6> sourceFiles {{
+	std::array<FileLines, 7> sourceFiles {{
 		{usersFilePath(), userLines},
 		{teamsFilePath(), teamLines},
 		{teamSubscriptionsFilePath(), teamSubscriptionLines},
 		{channelsFilePath(), channelLines},
 		{threadsFilePath(), threadLines},
-		{messagesFilePath(), messageLines}
+		{messagesFilePath(), messageLines},
+		{privateMessagesFilePath(), privateMessageLines}
 	}};
 	bool hasSavedData = false;
 	for (FileLines &file : sourceFiles)
@@ -388,6 +416,7 @@ DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Tea
 	loadChannels(channelLines, _delimiter, teamIndexes, loadedTeams, channelIndexes);
 	loadThreads(threadLines, _delimiter, channelIndexes, loadedTeams, threadIndexes);
 	loadMessages(messageLines, _delimiter, threadIndexes, loadedTeams);
+	loadPrivateMessages(privateMessageLines, _delimiter, messages);
 	materializeTeams(loadedTeams, teams);
 
 	std::cout << "Loaded database: "
@@ -430,6 +459,12 @@ std::filesystem::path
 DatabaseLoader::messagesFilePath() const
 {
 	return _baseDirectory / "messages.txt";
+}
+
+std::filesystem::path
+DatabaseLoader::privateMessagesFilePath() const
+{
+	return _baseDirectory / "privateMessages.txt";
 }
 
 } // namespace server::database

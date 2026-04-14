@@ -63,7 +63,7 @@ class DatabaseLoader {
 	public:
 		explicit DatabaseLoader(std::filesystem::path baseDirectory = "server_data", char delimiter = '|');
 
-		bool load(std::vector<myteams::User> &users, std::vector<myteams::Team> &teams) const;
+		bool load(std::vector<myteams::User> &users, std::vector<myteams::Team> &teams, std::vector<myteams::Message> &messages) const;
 
 	private:
 		std::filesystem::path usersFilePath() const;
@@ -72,6 +72,7 @@ class DatabaseLoader {
 		std::filesystem::path channelsFilePath() const;
 		std::filesystem::path threadsFilePath() const;
 		std::filesystem::path messagesFilePath() const;
+		std::filesystem::path privateMessagesFilePath() const;
 
 		std::filesystem::path _baseDirectory;
 		char _delimiter;

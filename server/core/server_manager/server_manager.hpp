@@ -51,6 +51,8 @@ class ServerManager {
 		std::uint16_t _port;
 		std::vector<myteams::User> _users;
 		std::vector<myteams::Team> _teams;
+        std::vector<myteams::Message> _messages;
+
 
 		static std::atomic<bool> _isRunning;
 };

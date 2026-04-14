@@ -1,4 +1,5 @@
 #include "server_manager.hpp"
+#include "commands/command_context.hpp"
 #include "common/utils/Socket.hpp"
 #include "server/commands/command_dispatcher.hpp"
 #include "exceptions/server_exceptions.hpp"
@@ -78,8 +79,11 @@ shouldKeepClientConnected(
     const short clientEvents,
     std::vector<myteams::User> &users,
     std::vector<myteams::Team> &teams,
+    std::vector<myteams::Message> &messages,
     const ClientSocketMap &clientSockets,
-    AuthenticatedUserByFd &authenticatedUsersByFd)
+    AuthenticatedUserByFd &authenticatedUsersByFd,
+    commands::AuthenticatedUserByUUID &authenticatedUsersByUUID
+)
 {
     if ((clientEvents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
         return false;
@@ -93,8 +97,10 @@ shouldKeepClientConnected(
             clientFd,
             users,
             teams,
+            messages,
             clientSockets,
-            authenticatedUsersByFd);
+            authenticatedUsersByFd,
+        authenticatedUsersByUUID);
     }
     if ((clientEvents & POLLOUT) != 0 && !handleWritableEvent(clientManager, clientFd)) {
         return false;
@@ -121,7 +127,8 @@ removeClientAt(
     ClientSocketMap &clientSockets,
     ClientManager &clientManager,
     std::vector<myteams::User> &users,
-    AuthenticatedUserByFd &authenticatedUsersByFd)
+    AuthenticatedUserByFd &authenticatedUsersByFd,
+commands::AuthenticatedUserByUUID & authenticatedUsersByUUID)
 {
     const std::int32_t clientFd = pollFds[index].fd;
     commands::handleClientDisconnection(
@@ -129,7 +136,8 @@ removeClientAt(
         clientFd,
         users,
         clientSockets,
-        authenticatedUsersByFd);
+        authenticatedUsersByFd,
+        authenticatedUsersByUUID);
     clientSockets.erase(clientFd);
     clientManager.removeClient(clientFd);
     pollFds.erase(pollFds.begin()
@@ -233,7 +241,7 @@ ServerManager::runPollLoop()
         throw SocketNotInitializedException();
     }
     database::DatabaseLoader databaseLoader;
-    const bool hasLoadedData = databaseLoader.load(_users, _teams);
+    const bool hasLoadedData = databaseLoader.load(_users, _teams, _messages);
     if (!hasLoadedData) {
         std::cout << "Server started with empty persisted state." << std::endl;
     }
@@ -242,6 +250,7 @@ ServerManager::runPollLoop()
     PollFdList pollFds;
     ClientSocketMap clientSockets;
     AuthenticatedUserByFd authenticatedUsersByFd;
+    commands::AuthenticatedUserByUUID authenticatedUsersByUUID;
     ClientManager clientManager;
 
     for (myteams::User &user : _users) {
@@ -288,8 +297,10 @@ ServerManager::runPollLoop()
                 currentEvents,
                 _users,
                 _teams,
+                _messages,
                 clientSockets,
-                authenticatedUsersByFd)) {
+                authenticatedUsersByFd,
+                authenticatedUsersByUUID)) {
                 refreshClientPollInterest(currentPollFd, clientManager, currentFd);
                 ++index;
                 continue;
@@ -300,12 +311,13 @@ ServerManager::runPollLoop()
                 clientSockets,
                 clientManager,
                 _users,
-                authenticatedUsersByFd);
+                authenticatedUsersByFd,
+                authenticatedUsersByUUID);
         }
     }
     clientSockets.clear();
     database::DatabaseSaver databaseSaver;
-    if (!databaseSaver.save(_users, _teams)) {
+    if (!databaseSaver.save(_users, _teams, _messages)) {
         std::cerr << "Server state could not be fully saved." << std::endl;
     }
 }
