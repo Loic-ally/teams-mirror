@@ -98,6 +98,15 @@ namespace myteams {
 
     //cli -> serv
     struct __attribute__((packed))
+    PayloadReqUse
+    {
+        char team_uuid[UUID_LENGTH];
+        char channel_uuid[UUID_LENGTH];
+        char thread_uuid[UUID_LENGTH];
+    };
+
+    //cli -> serv
+    struct __attribute__((packed))
     PayloadReqCreateTeam
     {
         char team_name[MAX_NAME_LENGTH];

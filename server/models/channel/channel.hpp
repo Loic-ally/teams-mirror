@@ -1,4 +1,9 @@
+#ifndef SERVER_MODELS_CHANNEL_CHANNEL_HPP
+#define SERVER_MODELS_CHANNEL_CHANNEL_HPP
+
+#ifdef _WIN32
 #pragma once
+#endif
 
 #include <cstring>
 #include <string>
@@ -45,6 +50,11 @@ namespace myteams
             return threads_;
         }
 
+        std::vector<Thread> &getThreads() noexcept
+        {
+            return threads_;
+        }
+
         void setUuid(const std::string &uuid) noexcept
         {
             copy_buffer(uuid_, uuid);
@@ -80,3 +90,5 @@ namespace myteams
         std::vector<Thread> threads_ {};
     };
 } // namespace myteams
+
+#endif // SERVER_MODELS_CHANNEL_CHANNEL_HPP

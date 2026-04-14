@@ -1,3 +1,10 @@
+#ifndef PARSER_HPP
+#define PARSER_HPP
+
+#ifdef _WIN32
+#pragma once
+#endif
+
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -62,3 +69,5 @@ public:
 };
 
 } // namespace client
+
+#endif //PARSER_HPP

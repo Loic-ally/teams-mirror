@@ -4,46 +4,22 @@
 #include <charconv>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <string_view>
 #include <system_error>
-#include <unordered_map>
+#include <utility>
 #include <vector>
 
-namespace {
+static constexpr std::size_t USER_FIELD_COUNT = 3;
+static constexpr std::size_t TEAM_FIELD_COUNT = 3;
+static constexpr std::size_t TEAM_SUBSCRIPTION_FIELD_COUNT = 2;
+static constexpr std::size_t CHANNEL_FIELD_COUNT = 4;
+static constexpr std::size_t THREAD_FIELD_COUNT = 6;
+static constexpr std::size_t MESSAGE_FIELD_COUNT = 5;
 
-constexpr std::size_t USER_FIELD_COUNT = 3;
-constexpr std::size_t TEAM_FIELD_COUNT = 3;
-constexpr std::size_t TEAM_SUBSCRIPTION_FIELD_COUNT = 2;
-constexpr std::size_t CHANNEL_FIELD_COUNT = 4;
-constexpr std::size_t THREAD_FIELD_COUNT = 6;
-constexpr std::size_t MESSAGE_FIELD_COUNT = 5;
-
-struct RecordFormat {
-	char delimiter;
-	std::size_t expectedFieldCount;
-	std::string_view sourceName;
-	bool requireFirstField;
-	bool requireSecondField;
-};
-
-struct ChannelPosition {
-	std::size_t teamIndex;
-	std::size_t channelIndex;
-};
-
-struct ThreadPosition {
-	std::size_t teamIndex;
-	std::size_t channelIndex;
-	std::size_t threadIndex;
-};
-
-using TeamIndexes = std::unordered_map<std::string, std::size_t>;
-using ChannelIndexes = std::unordered_map<std::string, ChannelPosition>;
-using ThreadIndexes = std::unordered_map<std::string, ThreadPosition>;
-
-std::vector<std::string>
+static std::vector<std::string>
 splitEscapedLine(const std::string &line, char delimiter)
 {
 	std::vector<std::string> fields;
@@ -85,7 +61,7 @@ splitEscapedLine(const std::string &line, char delimiter)
 	return fields;
 }
 
-bool
+static bool
 parseTimeValue(const std::string &field, std::time_t &outTime)
 {
 	try {
@@ -100,16 +76,16 @@ parseTimeValue(const std::string &field, std::time_t &outTime)
 	}
 }
 
-bool
+static bool
 parseBoolValue(const std::string &field)
 {
 	return field == "1" || field == "true" || field == "TRUE" || field == "True";
 }
 
-bool
+static bool
 parseRecord(
 	const std::string &line,
-	const RecordFormat &format,
+	const server::database::detail::RecordFormat &format,
 	std::vector<std::string> &fields)
 {
 	fields = splitEscapedLine(line, format.delimiter);
@@ -128,7 +104,7 @@ parseRecord(
 	return true;
 }
 
-bool
+static bool
 readTextFile(const std::filesystem::path &filePath, std::vector<std::string> &lines)
 {
 	std::ifstream inputFile(filePath);
@@ -146,15 +122,20 @@ readTextFile(const std::filesystem::path &filePath, std::vector<std::string> &li
 	return true;
 }
 
-} // namespace
 
 namespace server::database {
 
 using detail::LoadedChannel;
 using detail::LoadedTeam;
 using detail::LoadedThread;
+using detail::RecordFormat;
+using detail::ChannelPosition;
+using detail::ThreadPosition;
+using detail::TeamIndexes;
+using detail::ChannelIndexes;
+using detail::ThreadIndexes;
 
-void
+static void
 loadUsers(const std::vector<std::string> &userLines, char delimiter, std::vector<myteams::User> &users)
 {
 	std::vector<std::string> fields;
@@ -168,7 +149,7 @@ loadUsers(const std::vector<std::string> &userLines, char delimiter, std::vector
 	}
 }
 
-void
+static void
 loadTeams(
 	const std::vector<std::string> &teamLines,
 	char delimiter,
@@ -196,7 +177,7 @@ loadTeams(
 	}
 }
 
-void
+static void
 loadTeamSubscriptions(
 	const std::vector<std::string> &teamSubscriptionLines,
 	char delimiter,
@@ -226,7 +207,7 @@ loadTeamSubscriptions(
 	}
 }
 
-void
+static void
 loadChannels(
 	const std::vector<std::string> &channelLines,
 	char delimiter,
@@ -260,7 +241,7 @@ loadChannels(
 	}
 }
 
-void
+static void
 loadThreads(
 	const std::vector<std::string> &threadLines,
 	char delimiter,
@@ -306,7 +287,7 @@ loadThreads(
 	}
 }
 
-void
+static void
 loadMessages(
 	const std::vector<std::string> &messageLines,
 	char delimiter,
@@ -342,7 +323,7 @@ loadMessages(
 	}
 }
 
-void
+static void
 materializeTeams(std::vector<LoadedTeam> &loadedTeams, std::vector<myteams::Team> &teams)
 {
 	for (LoadedTeam &loadedTeam : loadedTeams) {
@@ -380,21 +361,18 @@ DatabaseLoader::load(std::vector<myteams::User> &users, std::vector<myteams::Tea
 	std::vector<std::string> channelLines;
 	std::vector<std::string> threadLines;
 	std::vector<std::string> messageLines;
-	struct FileLines {
-		std::filesystem::path path;
-		std::vector<std::string> *lines;
-	};
+	using FileLines = std::pair<std::filesystem::path, std::reference_wrapper<std::vector<std::string>>>;
 	std::array<FileLines, 6> sourceFiles {{
-		{usersFilePath(), &userLines},
-		{teamsFilePath(), &teamLines},
-		{teamSubscriptionsFilePath(), &teamSubscriptionLines},
-		{channelsFilePath(), &channelLines},
-		{threadsFilePath(), &threadLines},
-		{messagesFilePath(), &messageLines}
+		{usersFilePath(), userLines},
+		{teamsFilePath(), teamLines},
+		{teamSubscriptionsFilePath(), teamSubscriptionLines},
+		{channelsFilePath(), channelLines},
+		{threadsFilePath(), threadLines},
+		{messagesFilePath(), messageLines}
 	}};
 	bool hasSavedData = false;
 	for (FileLines &file : sourceFiles)
-		hasSavedData = readTextFile(file.path, *file.lines) || hasSavedData;
+		hasSavedData = readTextFile(file.first, file.second.get()) || hasSavedData;
 	if (!hasSavedData) {
 		std::cout << "No saved database found. Starting with an empty state." << std::endl;
 		return false;

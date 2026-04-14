@@ -11,10 +11,6 @@
 #include "server/commands/command_context.hpp"
 #include "server/models/user/user.hpp"
 
-namespace server {
-class ClientManager;
-}
-
 namespace server::commands {
 
 void handleLogoutCommand(CommandContext &context);
