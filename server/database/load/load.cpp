@@ -19,7 +19,7 @@ static constexpr std::size_t TEAM_SUBSCRIPTION_FIELD_COUNT = 2;
 static constexpr std::size_t CHANNEL_FIELD_COUNT = 4;
 static constexpr std::size_t THREAD_FIELD_COUNT = 6;
 static constexpr std::size_t MESSAGE_FIELD_COUNT = 5;
-static constexpr std::size_t PRIVATE_MESSAGE_FIELD_COUNT = 6;
+static constexpr std::size_t PRIVATE_MESSAGE_FIELD_COUNT = 5;
 
 static std::vector<std::string>
 splitEscapedLine(const std::string &line, char delimiter)
@@ -162,16 +162,16 @@ loadPrivateMessages(const std::vector<std::string> &privateMessageLines, char de
 		if (!parseRecord(line, messageFormat, fields))
 			continue;
 		std::time_t createdAt = 0;
-		if (!parseTimeValue(fields.at(3), createdAt)) {
+		if (!parseTimeValue(fields.at(2), createdAt)) {
 			std::cerr << "Skipping message with invalid timestamp: " << line << std::endl;
 			continue;
 		}
 		messages.emplace_back(
+			fields.at(0),
 			fields.at(1),
-			fields.at(2),
 			createdAt,
-			fields.at(4),
-            fields.at(5));
+			fields.at(3),
+            fields.at(4));
 	}
 }
 

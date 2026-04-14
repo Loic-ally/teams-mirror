@@ -25,7 +25,7 @@ static void sendMessage(CommandContext &context, const myteams::Message &msg) {
 }
 
 void handleSendCommand(CommandContext &context) {
-    if (context.payloadSize != sizeof(myteams::PayloadReqTargetUser)) {
+    if (context.payloadSize != sizeof(myteams::PayloadReqSendMsg)) {
         queueStatus(context, myteams::ERR_BAD_REQUEST);
         return;
     }
@@ -62,6 +62,7 @@ void handleSendCommand(CommandContext &context) {
         body,
         targetUUID);
     sendMessage(context, msg);
+    queueStatus(context, myteams::RPL_OK);
 }
 
 } // namespace server::commands
