@@ -16,6 +16,11 @@
 
 namespace client::commands {
 
+struct ReceivedPacket {
+    myteams::PacketHeader header {};
+    std::string payload;
+};
+
 std::string buildPacket(std::uint16_t code, std::string_view payload = {});
 
 template <typename PayloadType>

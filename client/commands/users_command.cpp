@@ -13,11 +13,6 @@
 namespace client::commands {
 namespace users_command_detail {
 
-struct ReceivedPacket {
-    myteams::PacketHeader header {};
-    std::string payload;
-};
-
 ReceivedPacket readReplySkippingEvents(const utils::Socket &socket)
 {
     ReceivedPacket packet;
