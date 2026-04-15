@@ -27,8 +27,6 @@ static bool parseTeamUuidFromPayload(CommandContext &context, std::string &outTe
 
 static void queueTeamsList(CommandContext &context, const myteams::User &authenticatedUser)
 {
-    std::vector<myteams::PayloadRplTeam> payloads;
-
     for (const myteams::Team &team : context.teams) {
         if (!team.isUserSubscribed(authenticatedUser.getUuid())) {
             continue;
@@ -37,27 +35,16 @@ static void queueTeamsList(CommandContext &context, const myteams::User &authent
         copyPaddedString(payload.team_uuid, sizeof(payload.team_uuid), team.getUuid());
         copyPaddedString(payload.team_name, sizeof(payload.team_name), team.getName());
         copyPaddedString(payload.team_description, sizeof(payload.team_description), team.getDescription());
-        payloads.push_back(payload);
-    }
-
-    if (payloads.empty()) {
         queuePacket(
             context.clientManager,
             context.clientFd,
-            buildPacket(myteams::RPL_TEAMS_LIST));
-        return;
+            buildPacket(myteams::RPL_SUBSCRIBED_LIST, payload));
     }
-
-    queuePacket(
-        context.clientManager,
-        context.clientFd,
-        buildPacket(myteams::RPL_TEAMS_LIST, payloads));
+    queueStatus(context, myteams::RPL_OK);
 }
 
 static void queueUsersList(CommandContext &context, const myteams::Team &team)
 {
-    std::vector<myteams::PayloadRplUser> payloads;
-
     for (const myteams::Team::UserUuid &subscribedUserUuid : team.getSubscribedUsers()) {
         const std::string_view userUuid(subscribedUserUuid.data());
         const auto user = findUserByUuid(context.users, userUuid);
@@ -69,21 +56,12 @@ static void queueUsersList(CommandContext &context, const myteams::Team &team)
         copyPaddedString(payload.user_uuid, sizeof(payload.user_uuid), resolvedUser.getUuid());
         copyPaddedString(payload.user_name, sizeof(payload.user_name), resolvedUser.getName());
         payload.user_status = resolvedUser.isLoggedIn() ? 1U : 0U;
-        payloads.push_back(payload);
-    }
-
-    if (payloads.empty()) {
         queuePacket(
             context.clientManager,
             context.clientFd,
-            buildPacket(myteams::RPL_USERS_LIST));
-        return;
+            buildPacket(myteams::RPL_USERS_LIST, payload));
     }
-
-    queuePacket(
-        context.clientManager,
-        context.clientFd,
-        buildPacket(myteams::RPL_USERS_LIST, payloads));
+    queueStatus(context, myteams::RPL_OK);
 }
 
 void handleSubscribeCommand(CommandContext &context)

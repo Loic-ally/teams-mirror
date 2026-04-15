@@ -1,5 +1,4 @@
 #include "server_manager.hpp"
-#include "commands/command_context.hpp"
 #include "common/utils/Socket.hpp"
 #include "server/commands/command_dispatcher.hpp"
 #include "exceptions/server_exceptions.hpp"
@@ -28,6 +27,7 @@ namespace server {
 using PollFdList = std::vector<struct pollfd>;
 using ClientSocketMap = commands::ClientSockets;
 using AuthenticatedUserByFd = commands::AuthenticatedUserByFd;
+using AuthenticatedUserByUUID = commands::AuthenticatedUserByUUID;
 
 static std::unique_ptr<utils::Socket>
 acceptClientSocket(const utils::Socket &listenSocket)
@@ -82,8 +82,7 @@ shouldKeepClientConnected(
     std::vector<myteams::Message> &messages,
     const ClientSocketMap &clientSockets,
     AuthenticatedUserByFd &authenticatedUsersByFd,
-    commands::AuthenticatedUserByUUID &authenticatedUsersByUUID
-)
+    AuthenticatedUserByUUID &authenticatedUsersByUUID)
 {
     if ((clientEvents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
         return false;
@@ -100,7 +99,7 @@ shouldKeepClientConnected(
             messages,
             clientSockets,
             authenticatedUsersByFd,
-        authenticatedUsersByUUID);
+            authenticatedUsersByUUID);
     }
     if ((clientEvents & POLLOUT) != 0 && !handleWritableEvent(clientManager, clientFd)) {
         return false;
@@ -121,6 +120,22 @@ refreshClientPollInterest(
 }
 
 static void
+refreshAllPollInterests(
+    PollFdList &pollFds,
+    const ClientManager &clientManager,
+    const std::int32_t listenFd)
+{
+    for (struct pollfd &pollFd : pollFds) {
+        if (pollFd.fd == listenFd) {
+            pollFd.events = POLLIN;
+            pollFd.revents = 0;
+            continue;
+        }
+        refreshClientPollInterest(pollFd, clientManager, pollFd.fd);
+    }
+}
+
+static void
 removeClientAt(
     PollFdList &pollFds,
     const std::size_t index,
@@ -128,7 +143,7 @@ removeClientAt(
     ClientManager &clientManager,
     std::vector<myteams::User> &users,
     AuthenticatedUserByFd &authenticatedUsersByFd,
-commands::AuthenticatedUserByUUID & authenticatedUsersByUUID)
+    AuthenticatedUserByUUID &authenticatedUsersByUUID)
 {
     const std::int32_t clientFd = pollFds[index].fd;
     commands::handleClientDisconnection(
@@ -187,7 +202,7 @@ ServerManager::pollSockets(std::vector<struct pollfd> &pollFds, const std::int32
 void
 ServerManager::handleSignal(const std::int32_t signal) noexcept
 {
-    if (signal == SIGINT) {
+    if (signal == SIGINT || signal == SIGTERM) {
         _isRunning.store(false);
     }
 }
@@ -197,6 +212,9 @@ ServerManager::installSignalHandler()
 {
     if (std::signal(SIGINT, &ServerManager::handleSignal) == SIG_ERR) {
         throw ServerException("signal(SIGINT) registration failed");
+    }
+    if (std::signal(SIGTERM, &ServerManager::handleSignal) == SIG_ERR) {
+        throw ServerException("signal(SIGTERM) registration failed");
     }
 }
 
@@ -250,7 +268,7 @@ ServerManager::runPollLoop()
     PollFdList pollFds;
     ClientSocketMap clientSockets;
     AuthenticatedUserByFd authenticatedUsersByFd;
-    commands::AuthenticatedUserByUUID authenticatedUsersByUUID;
+    AuthenticatedUserByUUID authenticatedUsersByUUID;
     ClientManager clientManager;
 
     for (myteams::User &user : _users) {
@@ -264,6 +282,7 @@ ServerManager::runPollLoop()
     listenPollFd.events = POLLIN;
     pollFds.push_back(listenPollFd);
     while (_isRunning.load()) {
+        refreshAllPollInterests(pollFds, clientManager, listenFd);
         const std::int32_t readyCount = pollSockets(pollFds, -1);
         if (readyCount == 0) {
             continue;
