@@ -10,6 +10,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
 	add_compile_options(-Wall -Wextra)
 endif()
 
+set(CMAKE_SKIP_RPATH TRUE)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
 set(MYTEAMS_LIB_DIR "${CMAKE_SOURCE_DIR}/libs/myteams")
@@ -49,12 +51,6 @@ endif()
 
 add_library(myteams::myteams ALIAS myteams)
 
-if(APPLE)
-	set(MYTEAMS_RUNTIME_RPATH "@loader_path/libs/myteams")
-else()
-	set(MYTEAMS_RUNTIME_RPATH "$ORIGIN/libs/myteams")
-endif()
-
 file(GLOB_RECURSE COMMON_UTILS_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/common/utils/*.cpp"
 )
@@ -73,19 +69,11 @@ target_include_directories(myteams_server PRIVATE
 	"${MYTEAMS_LIB_DIR}"
 )
 target_link_libraries(myteams_server PRIVATE myteams::myteams)
-set_target_properties(myteams_server PROPERTIES
-	BUILD_RPATH "${MYTEAMS_RUNTIME_RPATH}"
-	INSTALL_RPATH "${MYTEAMS_RUNTIME_RPATH}"
-)
 if(APPLE AND MYTEAMS_IMPORTED_LIB)
 	add_custom_command(TARGET myteams_server POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			"${MYTEAMS_IMPORTED_LIB}"
 			"${MYTEAMS_LIB_DIR}/${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
-		COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change
-			"${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
-			"@loader_path/libs/myteams/${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
-			"$<TARGET_FILE:myteams_server>"
 	)
 endif()
 
@@ -102,18 +90,10 @@ target_include_directories(myteams_cli PRIVATE
 	"${MYTEAMS_LIB_DIR}"
 )
 target_link_libraries(myteams_cli PRIVATE myteams::myteams)
-set_target_properties(myteams_cli PROPERTIES
-	BUILD_RPATH "${MYTEAMS_RUNTIME_RPATH}"
-	INSTALL_RPATH "${MYTEAMS_RUNTIME_RPATH}"
-)
 if(APPLE AND MYTEAMS_IMPORTED_LIB)
 	add_custom_command(TARGET myteams_cli POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			"${MYTEAMS_IMPORTED_LIB}"
 			"${MYTEAMS_LIB_DIR}/${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
-		COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change
-			"${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
-			"@loader_path/libs/myteams/${MYTEAMS_APPLE_RUNTIME_LIB_NAME}"
-			"$<TARGET_FILE:myteams_cli>"
 	)
 endif()
