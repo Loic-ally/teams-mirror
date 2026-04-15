@@ -3,6 +3,10 @@
 #include "commands/command_context.hpp"
 #include "protocol.hpp"
 #include "server/commands/command_utils.hpp"
+#include <exception>
+#include <iostream>
+#include <string>
+#include <string_view>
 
 namespace server::commands {
 
@@ -24,7 +28,9 @@ void handleMessagesCommand(CommandContext &context) {
         return;
     }
 
-    if (context.authenticatedUsersByFd.find(context.clientFd) == context.authenticatedUsersByFd.end()) {
+    const auto &client = context.authenticatedUsersByFd.find(context.clientFd);
+
+    if (client == context.authenticatedUsersByFd.end()) {
         queueStatus(context, myteams::ERR_UNAUTHORIZED);
         return;
     }
@@ -35,7 +41,8 @@ void handleMessagesCommand(CommandContext &context) {
     std::vector<myteams::Message> filteredMessages;
 
     for (const auto& msg : context.messages) {
-        if (msg.getAuthorUuid() == payload.target_uuid) {
+        if (msg.getAuthorUuid() == payload.target_uuid &&
+            msg.getReceiverUuid() == client->second) {
             filteredMessages.push_back(msg);
         }
     }
@@ -45,7 +52,6 @@ void handleMessagesCommand(CommandContext &context) {
             return a.getCreatedAt() < b.getCreatedAt();
         }
     );
-
     queueMessages(filteredMessages, context);
     queueStatus(context, myteams::RPL_OK);
 }

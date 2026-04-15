@@ -1,4 +1,6 @@
 #include "command_dispatcher.hpp"
+#include "commands/messages_command.hpp"
+#include "commands/send_command.hpp"
 #include "help_command.hpp"
 #include "info_command.hpp"
 #include "list_command.hpp"
@@ -25,7 +27,7 @@ namespace client::commands {
 using CommandHandler = std::function<void(Client &, ParsedInput &)>;
 using CommandEntry = std::pair<std::string_view, CommandHandler>;
 
-static const std::array<CommandEntry, 12> COMMAND_TABLE {{
+static const std::array<CommandEntry, 14> COMMAND_TABLE {{
     {"/help", &handleHelp},
     {"/info", &handleInfo},
     {"/login", &handleLogin},
@@ -37,7 +39,9 @@ static const std::array<CommandEntry, 12> COMMAND_TABLE {{
     {"/unsubscribe", &handleUnsubscribe},
     {"/subscribed", &handleSubscribedList},
     {"/user", &handleUser},
-    {"/users", &handleUsers}
+    {"/users", &handleUsers},
+    {"/send", &handleSend},
+    {"/messages", &handleMessages},
 }};
 
 void dispatchCommand(Client &clientData, ParsedInput &input)

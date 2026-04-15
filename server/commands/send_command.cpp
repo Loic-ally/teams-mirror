@@ -12,16 +12,16 @@ static void sendMessage(CommandContext &context, const myteams::Message &msg) {
 
     const auto &receiver = context.authenticatedUsersByUUID.find(std::string(msg.getReceiverUuid()));
 
-    if (receiver == context.authenticatedUsersByUUID.end()) {
-        return;
-    }
     myteams::PayloadEvtPrivateMsg payload {};
     copyPaddedString(payload.message_body, msg.getBody());
     copyPaddedString(payload.sender_uuid, msg.getAuthorUuid());
+    ServerLogger::logPrivateMessageSent(msg.getAuthorUuid(), msg.getReceiverUuid(), msg.getBody());
+    if (receiver == context.authenticatedUsersByUUID.end()) {
+        return;
+    }
     queuePacket(context.clientManager,
         receiver->second,
         buildPacket(myteams::EVT_PRIVATE_MSG_RCVD, payload));
-    ServerLogger::logPrivateMessageSent(msg.getAuthorUuid(), msg.getReceiverUuid(), msg.getBody());
 }
 
 void handleSendCommand(CommandContext &context) {
