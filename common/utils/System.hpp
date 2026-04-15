@@ -25,7 +25,6 @@ class System {
     static std::size_t write(int fd, const std::string &str);
     static std::string read(int fd, std::size_t size);
     static void getsockname(int fd, sockaddr &addr);
-    static int fork();
     static int kill(int pid);
     static int waitpid(int pid, bool block = false);
     static int inet_pton(int af, std::string_view ipStr, unsigned int &ipInt);

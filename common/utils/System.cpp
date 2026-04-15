@@ -42,14 +42,6 @@ void System::getsockname(int fd, sockaddr &addr) {
     }
 }
 
-int System::fork() {
-    auto res = ::fork();
-    if (res == -1) {
-        throw System::SystemException("fork() failed", errno);
-    }
-    return res;
-}
-
 int System::kill(int pid) {
     auto res = ::kill(pid, SIGTERM);
     if (res < 0) {
