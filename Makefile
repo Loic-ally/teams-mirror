@@ -1,31 +1,39 @@
-##
-## EPITECH PROJECT, 2026
-## My Teams
-## Makefile
-##
+SERVER_NAME = myteams_server
+CLIENT_NAME = myteams_cli
 
-BUILD_DIR   = build
-NPROC       = $(shell sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
+LIB_DIR     = ./libs/myteams
 
-all:
-	@if [ -f $(BUILD_DIR)/CMakeCache.txt ] && ! grep -q "CMAKE_HOME_DIRECTORY:INTERNAL=$(CURDIR)" $(BUILD_DIR)/CMakeCache.txt; then \
-		echo "Resetting incompatible CMake cache in $(BUILD_DIR)"; \
-		rm -rf $(BUILD_DIR); \
-	fi
-	cmake -S . -B $(BUILD_DIR)
-	cmake --build $(BUILD_DIR) --parallel $(NPROC)
+CXX         = g++
+CXXFLAGS    = -Wall -Wextra -std=c++20 -I. -I./common -I./common/utils -I./server -I./server/core -I./client -I$(LIB_DIR)
+LDFLAGS     = -L$(LIB_DIR) -lmyteams -luuid
+
+SERVER_SRC  = $(shell find ./server -name "*.cpp") \
+              $(shell find ./common -name "*.cpp")
+
+CLIENT_SRC  = $(shell find ./client -name "*.cpp") \
+              $(shell find ./common -name "*.cpp")
+
+SERVER_OBJ  = $(SERVER_SRC:.cpp=.o)
+CLIENT_OBJ  = $(CLIENT_SRC:.cpp=.o)
+
+all: $(SERVER_NAME) $(CLIENT_NAME)
+
+$(SERVER_NAME): $(SERVER_OBJ)
+	$(CXX) $(SERVER_OBJ) -o $(SERVER_NAME) $(LDFLAGS)
+
+$(CLIENT_NAME): $(CLIENT_OBJ)
+	$(CXX) $(CLIENT_OBJ) -o $(CLIENT_NAME) $(LDFLAGS)
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	@if [ -d $(BUILD_DIR) ]; then cmake --build $(BUILD_DIR) --target clean; fi
+	rm -f $(SERVER_OBJ) $(CLIENT_OBJ)
 	find . -type f -name "*.gcda" -delete
 	find . -type f -name "*.gcno" -delete
 	find . -type f -name "*.gcov" -delete
 
-fclean:
-	rm -rf $(BUILD_DIR)
-	rm -rf ./myteams_server ./myteams_cli
-	find . -type f -name "*.gcda" -delete
-	find . -type f -name "*.gcno" -delete
-	find . -type f -name "*.gcov" -delete
+fclean: clean
+	rm -f $(SERVER_NAME) $(CLIENT_NAME)
 
 re: fclean all
