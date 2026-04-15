@@ -25,7 +25,8 @@ static bool extractOptionalUuid(const std::string_view rawData, std::string &out
 
 void handleUseCommand(CommandContext &context)
 {
-    if (context.payloadSize != sizeof(myteams::PayloadReqUse)) {
+    if (context.payloadSize != sizeof(myteams::PayloadReqTeamTarget)
+        && context.payloadSize != sizeof(myteams::PayloadReqUse)) {
         queueStatus(context, myteams::ERR_BAD_REQUEST);
         return;
     }
@@ -35,18 +36,27 @@ void handleUseCommand(CommandContext &context)
         return;
     }
 
-    myteams::PayloadReqUse payload {};
-    std::memcpy(&payload, context.payloadData.data(), sizeof(payload));
-
     std::string teamUuid;
     std::string channelUuid;
     std::string threadUuid;
-    if (!extractOptionalUuid(std::string_view(payload.team_uuid, sizeof(payload.team_uuid)), teamUuid)
-        || !extractOptionalUuid(std::string_view(payload.channel_uuid, sizeof(payload.channel_uuid)), channelUuid)
-        || !extractOptionalUuid(std::string_view(payload.thread_uuid, sizeof(payload.thread_uuid)), threadUuid)
-        || !isContextCombinationValid(teamUuid, channelUuid, threadUuid)) {
-        queueStatus(context, myteams::ERR_BAD_REQUEST);
-        return;
+
+    if (context.payloadSize == sizeof(myteams::PayloadReqTeamTarget)) {
+        myteams::PayloadReqTeamTarget payload {};
+        std::memcpy(&payload, context.payloadData.data(), sizeof(payload));
+        if (!extractOptionalUuid(std::string_view(payload.team_uuid, sizeof(payload.team_uuid)), teamUuid)) {
+            queueStatus(context, myteams::ERR_BAD_REQUEST);
+            return;
+        }
+    } else {
+        myteams::PayloadReqUse payload {};
+        std::memcpy(&payload, context.payloadData.data(), sizeof(payload));
+        if (!extractOptionalUuid(std::string_view(payload.team_uuid, sizeof(payload.team_uuid)), teamUuid)
+            || !extractOptionalUuid(std::string_view(payload.channel_uuid, sizeof(payload.channel_uuid)), channelUuid)
+            || !extractOptionalUuid(std::string_view(payload.thread_uuid, sizeof(payload.thread_uuid)), threadUuid)
+            || !isContextCombinationValid(teamUuid, channelUuid, threadUuid)) {
+            queueStatus(context, myteams::ERR_BAD_REQUEST);
+            return;
+        }
     }
 
     context.clientManager.setContext(context.clientFd, teamUuid, channelUuid, threadUuid);

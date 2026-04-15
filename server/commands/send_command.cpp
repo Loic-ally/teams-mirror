@@ -42,8 +42,13 @@ void handleSendCommand(CommandContext &context) {
     std::string body;
     std::string targetUUID;
 
-    extractFixedString(payload.message_body, body);
-    extractFixedString(payload.target_uuid, targetUUID);
+    if (!extractFixedString(payload.message_body, body)
+        || !extractFixedString(payload.target_uuid, targetUUID)
+        || !isUuidFormatValid(targetUUID)
+        || body.empty()) {
+        queueStatus(context, myteams::ERR_BAD_REQUEST);
+        return;
+    }
 
     bool userExists = std::any_of(context.users.begin(), context.users.end(),
     [&targetUUID](const myteams::User& user) {
