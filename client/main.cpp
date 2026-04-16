@@ -54,9 +54,9 @@ static void handlingInput(client::Client &clientData) {
     try {
         client::commands::dispatchCommand(clientData, input);
     } catch (const std::exception &exception) {
-        std::cerr << "Command error: " << exception.what() << std::endl;
+        std::cout << "Command error: " << exception.what() << std::endl;
     } catch (...) {
-        std::cerr << "Command error: unknown error" << std::endl;
+        std::cout << "Command error: unknown error" << std::endl;
     }
 }
 
@@ -97,7 +97,7 @@ std::int32_t main(std::int32_t ac, char **av) {
     auto socket = createSocket(av[1], av[2]);
     return runLoop(std::move(socket));
   } catch (std::exception &e) {
-    std::cerr << e.what() << std::endl;
+    std::cout << e.what() << std::endl;
     return 84;
   }
 }

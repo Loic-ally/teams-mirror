@@ -43,7 +43,7 @@ run(std::int32_t ac, char **av)
         serverManager.initializeTcpListener();
         serverManager.runPollLoop();
     } catch (const ServerException &exception) {
-        std::cerr << exception.what() << std::endl;
+        std::cout << exception.what() << std::endl;
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
