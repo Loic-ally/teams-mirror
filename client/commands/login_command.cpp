@@ -44,7 +44,7 @@ void handleLogin(Client &clientData, ParsedInput &input)
         return;
     }
     if (responseHeader.code == myteams::ERR_ALREADY_EXIST) {
-        Printer::errorAlreadyExist();
+        std::cout << "TODO: REMOVE THIS IT SHOULD NOT HAVE THIS ERROR" << std::endl;
         return;
     }
     if (responseHeader.code == myteams::ERR_BAD_REQUEST) {

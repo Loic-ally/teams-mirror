@@ -95,6 +95,10 @@ static void handleCreateError(const std::uint16_t code, Client &clientData)
         Printer::errorUnauthorized();
         return;
     }
+    if (code == myteams::ERR_ALREADY_EXIST) {
+        Printer::errorAlreadyExist();
+        return;
+    }
     if (code == myteams::ERR_NOT_FOUND) {
         return handleNotFound(clientData);
     }
