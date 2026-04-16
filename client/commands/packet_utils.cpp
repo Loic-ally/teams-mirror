@@ -11,6 +11,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <sys/poll.h>
 #include <thread>
 
 namespace client::commands {

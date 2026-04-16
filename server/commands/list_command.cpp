@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <string>
 #include <vector>
 
@@ -17,24 +16,13 @@ static void queuePayloadArray(
     const myteams::StatusCode status,
     const std::vector<PayloadType> &payloads)
 {
-    if (payloads.empty()) {
+    for (const PayloadType &payload : payloads) {
         queuePacket(
             context.clientManager,
             context.clientFd,
-            buildPacket(static_cast<std::uint16_t>(status)));
-        return;
+            buildPacket(static_cast<std::uint16_t>(status), payload));
     }
-
-    const std::size_t payloadSize = payloads.size() * sizeof(PayloadType);
-    if (payloadSize > std::numeric_limits<std::uint16_t>::max()) {
-        queueStatus(context, myteams::ERR_SERVER_INTERNAL);
-        return;
-    }
-
-    queuePacket(
-        context.clientManager,
-        context.clientFd,
-        buildPacket(static_cast<std::uint16_t>(status), payloads));
+    queueStatus(context, myteams::RPL_OK);
 }
 
 static void queueTeamsList(CommandContext &context)

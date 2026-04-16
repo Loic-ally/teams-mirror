@@ -27,6 +27,7 @@ void handleLoginCommand(CommandContext &context)
     }
     const auto completeLogin = [&context](myteams::User &user) {
         context.authenticatedUsersByFd[context.clientFd] = std::string(user.getUuid());
+        context.authenticatedUsersByUUID[std::string(user.getUuid())] = context.clientFd;
         ServerLogger::logUserLoggedIn(user.getUuid());
         queueStatus(context, myteams::RPL_OK);
 

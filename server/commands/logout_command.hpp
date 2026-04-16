@@ -20,7 +20,9 @@ void handleClientDisconnection(
     std::int32_t clientFd,
     std::vector<myteams::User> &users,
     const ClientSockets &clientSockets,
-    AuthenticatedUserByFd &authenticatedUsersByFd);
+    AuthenticatedUserByFd &authenticatedUsersByFd,
+    AuthenticatedUserByUUID &authenticatedUsersByUUID
+);
 
 } // namespace server::commands
 

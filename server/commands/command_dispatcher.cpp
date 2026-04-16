@@ -1,4 +1,9 @@
 #include "server/commands/command_dispatcher.hpp"
+#include "commands/command_context.hpp"
+#include "commands/messages_command.hpp"
+#include "commands/send_command.hpp"
+#include "models/message/message.hpp"
+#include "protocol.hpp"
 #include "server/commands/command_utils.hpp"
 #include "server/commands/create_command.hpp"
 #include "server/commands/info_command.hpp"
@@ -22,7 +27,7 @@ namespace server::commands {
 using CommandHandler = std::function<void(CommandContext &)>;
 using CommandHandlerEntry = std::pair<std::uint16_t, CommandHandler>;
 
-static const std::array<CommandHandlerEntry, 11> COMMAND_HANDLERS {{
+static const std::array<CommandHandlerEntry, 13> COMMAND_HANDLERS {{
     {myteams::CMD_LOGIN, &handleLoginCommand},
     {myteams::CMD_USERS, &handleUsersCommand},
     {myteams::CMD_USER_INFO, &handleUserCommand},
@@ -33,7 +38,9 @@ static const std::array<CommandHandlerEntry, 11> COMMAND_HANDLERS {{
     {myteams::CMD_LIST, &handleListCommand},
     {myteams::CMD_SUBSCRIBE, &handleSubscribeCommand},
     {myteams::CMD_UNSUBSCRIBE, &handleUnsubscribeCommand},
-    {myteams::CMD_SUBSCRIBED_LIST, &handleSubscribedListCommand}
+    {myteams::CMD_SUBSCRIBED_LIST, &handleSubscribedListCommand},
+    {myteams::CMD_MESSAGES, &handleMessagesCommand},
+    {myteams::CMD_SEND, &handleSendCommand},
 }};
 
 static void dispatchCommand(CommandContext &context, const std::uint16_t commandCode)
@@ -55,8 +62,11 @@ void processClientIncomingPackets(
     const std::int32_t clientFd,
     std::vector<myteams::User> &users,
     std::vector<myteams::Team> &teams,
+    std::vector<myteams::Message> &messages,
     const ClientSockets &clientSockets,
-    AuthenticatedUserByFd &authenticatedUsersByFd)
+    AuthenticatedUserByFd &authenticatedUsersByFd,
+    AuthenticatedUserByUUID &authenticatedUsersByUUID
+)
 {
     while(true) {
         const std::string &incomingBuffer = clientManager.getIncomingBuffer(clientFd);
@@ -78,8 +88,10 @@ void processClientIncomingPackets(
             header.payload_size,
             users,
             teams,
+            messages,
             clientSockets,
-            authenticatedUsersByFd
+            authenticatedUsersByFd,
+            authenticatedUsersByUUID
         };
         dispatchCommand(context, header.code);
         clientManager.consumeIncomingBuffer(clientFd, packetSize);

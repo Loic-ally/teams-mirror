@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "models/message/message.hpp"
 #include "common/utils/Socket.hpp"
 #include "server/core/client_manager/client_manager.hpp"
 #include "server/models/team/team.hpp"
@@ -21,6 +22,7 @@ namespace server::commands {
 
 using ClientSockets = std::unordered_map<std::int32_t, std::unique_ptr<utils::Socket>>;
 using AuthenticatedUserByFd = std::unordered_map<std::int32_t, std::string>;
+using AuthenticatedUserByUUID = std::unordered_map<std::string, std::int32_t>;
 
 struct CommandContext {
     ClientManager &clientManager;
@@ -29,8 +31,10 @@ struct CommandContext {
     std::uint16_t payloadSize;
     std::vector<myteams::User> &users;
     std::vector<myteams::Team> &teams;
+    std::vector<myteams::Message> &messages;
     const ClientSockets &clientSockets;
     AuthenticatedUserByFd &authenticatedUsersByFd;
+    AuthenticatedUserByUUID &authenticatedUsersByUUID;
 };
 
 } // namespace server::commands

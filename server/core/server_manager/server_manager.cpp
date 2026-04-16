@@ -27,6 +27,7 @@ namespace server {
 using PollFdList = std::vector<struct pollfd>;
 using ClientSocketMap = commands::ClientSockets;
 using AuthenticatedUserByFd = commands::AuthenticatedUserByFd;
+using AuthenticatedUserByUUID = commands::AuthenticatedUserByUUID;
 
 static std::unique_ptr<utils::Socket>
 acceptClientSocket(const utils::Socket &listenSocket)
@@ -78,8 +79,10 @@ shouldKeepClientConnected(
     const short clientEvents,
     std::vector<myteams::User> &users,
     std::vector<myteams::Team> &teams,
+    std::vector<myteams::Message> &messages,
     const ClientSocketMap &clientSockets,
-    AuthenticatedUserByFd &authenticatedUsersByFd)
+    AuthenticatedUserByFd &authenticatedUsersByFd,
+    AuthenticatedUserByUUID &authenticatedUsersByUUID)
 {
     if ((clientEvents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
         return false;
@@ -93,8 +96,10 @@ shouldKeepClientConnected(
             clientFd,
             users,
             teams,
+            messages,
             clientSockets,
-            authenticatedUsersByFd);
+            authenticatedUsersByFd,
+            authenticatedUsersByUUID);
     }
     if ((clientEvents & POLLOUT) != 0 && !handleWritableEvent(clientManager, clientFd)) {
         return false;
@@ -115,13 +120,30 @@ refreshClientPollInterest(
 }
 
 static void
+refreshAllPollInterests(
+    PollFdList &pollFds,
+    const ClientManager &clientManager,
+    const std::int32_t listenFd)
+{
+    for (struct pollfd &pollFd : pollFds) {
+        if (pollFd.fd == listenFd) {
+            pollFd.events = POLLIN;
+            pollFd.revents = 0;
+            continue;
+        }
+        refreshClientPollInterest(pollFd, clientManager, pollFd.fd);
+    }
+}
+
+static void
 removeClientAt(
     PollFdList &pollFds,
     const std::size_t index,
     ClientSocketMap &clientSockets,
     ClientManager &clientManager,
     std::vector<myteams::User> &users,
-    AuthenticatedUserByFd &authenticatedUsersByFd)
+    AuthenticatedUserByFd &authenticatedUsersByFd,
+    AuthenticatedUserByUUID &authenticatedUsersByUUID)
 {
     const std::int32_t clientFd = pollFds[index].fd;
     commands::handleClientDisconnection(
@@ -129,7 +151,8 @@ removeClientAt(
         clientFd,
         users,
         clientSockets,
-        authenticatedUsersByFd);
+        authenticatedUsersByFd,
+        authenticatedUsersByUUID);
     clientSockets.erase(clientFd);
     clientManager.removeClient(clientFd);
     pollFds.erase(pollFds.begin()
@@ -179,7 +202,7 @@ ServerManager::pollSockets(std::vector<struct pollfd> &pollFds, const std::int32
 void
 ServerManager::handleSignal(const std::int32_t signal) noexcept
 {
-    if (signal == SIGINT) {
+    if (signal == SIGINT || signal == SIGTERM) {
         _isRunning.store(false);
     }
 }
@@ -189,6 +212,9 @@ ServerManager::installSignalHandler()
 {
     if (std::signal(SIGINT, &ServerManager::handleSignal) == SIG_ERR) {
         throw ServerException("signal(SIGINT) registration failed");
+    }
+    if (std::signal(SIGTERM, &ServerManager::handleSignal) == SIG_ERR) {
+        throw ServerException("signal(SIGTERM) registration failed");
     }
 }
 
@@ -233,7 +259,7 @@ ServerManager::runPollLoop()
         throw SocketNotInitializedException();
     }
     database::DatabaseLoader databaseLoader;
-    const bool hasLoadedData = databaseLoader.load(_users, _teams);
+    const bool hasLoadedData = databaseLoader.load(_users, _teams, _messages);
     if (!hasLoadedData) {
         std::cout << "Server started with empty persisted state." << std::endl;
     }
@@ -242,6 +268,7 @@ ServerManager::runPollLoop()
     PollFdList pollFds;
     ClientSocketMap clientSockets;
     AuthenticatedUserByFd authenticatedUsersByFd;
+    AuthenticatedUserByUUID authenticatedUsersByUUID;
     ClientManager clientManager;
 
     for (myteams::User &user : _users) {
@@ -255,6 +282,7 @@ ServerManager::runPollLoop()
     listenPollFd.events = POLLIN;
     pollFds.push_back(listenPollFd);
     while (_isRunning.load()) {
+        refreshAllPollInterests(pollFds, clientManager, listenFd);
         const std::int32_t readyCount = pollSockets(pollFds, -1);
         if (readyCount == 0) {
             continue;
@@ -288,8 +316,10 @@ ServerManager::runPollLoop()
                 currentEvents,
                 _users,
                 _teams,
+                _messages,
                 clientSockets,
-                authenticatedUsersByFd)) {
+                authenticatedUsersByFd,
+                authenticatedUsersByUUID)) {
                 refreshClientPollInterest(currentPollFd, clientManager, currentFd);
                 ++index;
                 continue;
@@ -300,12 +330,13 @@ ServerManager::runPollLoop()
                 clientSockets,
                 clientManager,
                 _users,
-                authenticatedUsersByFd);
+                authenticatedUsersByFd,
+                authenticatedUsersByUUID);
         }
     }
     clientSockets.clear();
     database::DatabaseSaver databaseSaver;
-    if (!databaseSaver.save(_users, _teams)) {
+    if (!databaseSaver.save(_users, _teams, _messages)) {
         std::cerr << "Server state could not be fully saved." << std::endl;
     }
 }

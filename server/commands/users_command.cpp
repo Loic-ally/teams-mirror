@@ -28,15 +28,13 @@ void handleUsersCommand(CommandContext &context)
         queueStatus(context, myteams::ERR_UNAUTHORIZED);
         return;
     }
-    std::vector<myteams::PayloadRplUser> usersPayload;
-    usersPayload.reserve(context.users.size());
     for (const myteams::User &user : context.users) {
-        usersPayload.push_back(users_command_detail::buildUserPayload(user));
+        queuePacket(
+            context.clientManager,
+            context.clientFd,
+            buildPacket(myteams::RPL_USERS_LIST, users_command_detail::buildUserPayload(user)));
     }
-    queuePacket(
-        context.clientManager,
-        context.clientFd,
-        buildPacket(myteams::RPL_USERS_LIST, usersPayload));
+    queueStatus(context, myteams::RPL_OK);
 }
 
 } // namespace server::commands

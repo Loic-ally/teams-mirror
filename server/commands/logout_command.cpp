@@ -50,7 +50,9 @@ void handleClientDisconnection(
     const std::int32_t clientFd,
     std::vector<myteams::User> &users,
     const ClientSockets &clientSockets,
-    AuthenticatedUserByFd &authenticatedUsersByFd)
+    AuthenticatedUserByFd &authenticatedUsersByFd,
+    AuthenticatedUserByUUID &authenticatedUsersByUUID
+)
 {
     const auto authenticatedUserIt = authenticatedUsersByFd.find(clientFd);
     if (authenticatedUserIt == authenticatedUsersByFd.end()) {
@@ -58,6 +60,11 @@ void handleClientDisconnection(
     }
     const auto user = findUserByUuid(users, authenticatedUserIt->second);
     authenticatedUsersByFd.erase(authenticatedUserIt);
+    const auto authenticatedUserUUIDIt = authenticatedUsersByUUID.find(authenticatedUserIt->second);
+    if (authenticatedUserUUIDIt == authenticatedUsersByUUID.end()) {
+        return;
+    }
+    authenticatedUsersByUUID.erase(authenticatedUserUUIDIt);
     if (!user.has_value()) {
         return;
     }

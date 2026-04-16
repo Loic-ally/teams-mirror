@@ -1,6 +1,8 @@
 
 #include "Socket.hpp"
+#include "System.hpp"
 #include "commands/command_dispatcher.hpp"
+#include <chrono>
 #include <cstdint>
 #include <exception>
 #include <iostream>
@@ -9,8 +11,13 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include "commands/packet_utils.hpp"
 #include "core/client.hpp"
 #include "parser/parser.hpp"
+#include "protocol.hpp"
+#include <sys/poll.h>
+#include <thread>
+#include <poll.h>
 #include <utility>
 
 std::unique_ptr<utils::Socket> createSocket(std::string adress,
@@ -26,19 +33,49 @@ std::unique_ptr<utils::Socket> createSocket(std::string adress,
   return socket;
 }
 
+bool canReadStdin() {
+    struct pollfd config{
+        0,
+        POLLIN,
+        0,
+    };
+    if (::poll(&config, 1, 0) == -1) {
+        throw std::runtime_error("poll() failed");
+    }
+    return config.revents & POLLIN;
+}
+
+static void handlingInput(client::Client &clientData) {
+    if (!canReadStdin()) {
+        return;
+    }
+    client::ParsedInput input;
+
+    try {
+        client::commands::dispatchCommand(clientData, input);
+    } catch (const std::exception &exception) {
+        std::cerr << "Command error: " << exception.what() << std::endl;
+    } catch (...) {
+        std::cerr << "Command error: unknown error" << std::endl;
+    }
+}
+
+static void handleEvent(client::Client &clientData) {
+    while(clientData.socket->poll(POLLIN) & POLLIN) {
+        myteams::PacketHeader header;
+        std::string out;
+        client::commands::readServerPacket(*clientData.socket, header, out);
+        client::commands::handleAsyncEventPacket(header.code, out);
+    }
+}
+
 std::int32_t runLoop(std::unique_ptr<utils::Socket> socket) {
     client::Client clientData;
-
     clientData.socket = std::move(socket);
+
     while (clientData.running) {
-        client::ParsedInput input;
-        try {
-            client::commands::dispatchCommand(clientData, input);
-        } catch (const std::exception &exception) {
-            std::cerr << "Command error: " << exception.what() << std::endl;
-        } catch (...) {
-            std::cerr << "Command error: unknown error" << std::endl;
-        }
+        handlingInput(clientData);
+        handleEvent(clientData);
     }
     return 0;
 }

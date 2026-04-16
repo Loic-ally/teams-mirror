@@ -19,15 +19,20 @@ void processClientIncomingPackets(
     std::int32_t clientFd,
     std::vector<myteams::User> &users,
     std::vector<myteams::Team> &teams,
+    std::vector<myteams::Message> &messages,
     const ClientSockets &clientSockets,
-    AuthenticatedUserByFd &authenticatedUsersByFd);
+    AuthenticatedUserByFd &authenticatedUsersByFd,
+    AuthenticatedUserByUUID &authenticatedUsersByUUID
+);
 
 void handleClientDisconnection(
     ClientManager &clientManager,
     std::int32_t clientFd,
     std::vector<myteams::User> &users,
     const ClientSockets &clientSockets,
-    AuthenticatedUserByFd &authenticatedUsersByFd);
+    AuthenticatedUserByFd &authenticatedUsersByFd,
+    AuthenticatedUserByUUID &authenticatedUsersByUUID
+);
 
 } // namespace server::commands
 

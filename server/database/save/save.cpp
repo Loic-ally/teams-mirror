@@ -1,4 +1,5 @@
 #include "save.hpp"
+#include "models/message/message.hpp"
 
 #include <array>
 #include <filesystem>
@@ -49,7 +50,7 @@ joinEscapedFields(const std::vector<std::string> &fields, char delimiter)
 }
 
 static SerializedLines
-serializeData(const std::vector<myteams::User> &users, const std::vector<myteams::Team> &teams, char delimiter)
+serializeData(const std::vector<myteams::User> &users, const std::vector<myteams::Team> &teams, std::vector<myteams::Message> &messages, char delimiter)
 {
 	SerializedLines serialized;
 	for (const myteams::User &user : users) {
@@ -58,6 +59,15 @@ serializeData(const std::vector<myteams::User> &users, const std::vector<myteams
 			std::string(user.getName()),
 			user.isLoggedIn() ? "1" : "0"
 		}, delimiter));
+	}
+    for (const auto &message : messages) {
+		serialized.privateMessages.push_back(joinEscapedFields({
+            std::string(message.getUuid()),
+            std::string(message.getAuthorUuid()),
+            std::to_string(static_cast<long long>(message.getCreatedAt())),
+            std::string(message.getBody()),
+            std::string(message.getReceiverUuid()),
+        }, delimiter));
 	}
 	for (const myteams::Team &team : teams) {
 		const std::string teamUuid(team.getUuid());
@@ -127,7 +137,7 @@ DatabaseSaver::DatabaseSaver(std::filesystem::path baseDirectory, char delimiter
 }
 
 bool
-DatabaseSaver::save(const std::vector<myteams::User> &users, const std::vector<myteams::Team> &teams) const
+DatabaseSaver::save(const std::vector<myteams::User> &users, const std::vector<myteams::Team> &teams, std::vector<myteams::Message> &messages) const
 {
 	std::error_code error;
 	std::filesystem::create_directories(_baseDirectory, error);
@@ -135,16 +145,17 @@ DatabaseSaver::save(const std::vector<myteams::User> &users, const std::vector<m
 		std::cerr << "Failed to create save directory: " << _baseDirectory << std::endl;
 		return false;
 	}
-	const SerializedLines serialized = serializeData(users, teams, _delimiter);
+	const SerializedLines serialized = serializeData(users, teams, messages, _delimiter);
 	using LineView = std::reference_wrapper<const std::vector<std::string>>;
 	using OutputFile = std::pair<std::filesystem::path, LineView>;
-	std::array<OutputFile, 6> outputFiles {{
+	std::array<OutputFile, 7> outputFiles {{
 		{usersFilePath(), std::cref(serialized.users)},
 		{teamsFilePath(), std::cref(serialized.teams)},
 		{teamSubscriptionsFilePath(), std::cref(serialized.teamSubscriptions)},
 		{channelsFilePath(), std::cref(serialized.channels)},
 		{threadsFilePath(), std::cref(serialized.threads)},
-		{messagesFilePath(), std::cref(serialized.messages)}
+		{messagesFilePath(), std::cref(serialized.messages)},
+		{privateMessagesFilePath(), std::cref(serialized.privateMessages)}
 	}};
 	bool saveSuccess = true;
 	for (const OutputFile &outputFile : outputFiles)
@@ -189,6 +200,12 @@ std::filesystem::path
 DatabaseSaver::messagesFilePath() const
 {
 	return _baseDirectory / "messages.txt";
+}
+
+std::filesystem::path
+DatabaseSaver::privateMessagesFilePath() const
+{
+	return _baseDirectory / "privateMessages.txt";
 }
 
 } // namespace server::database
