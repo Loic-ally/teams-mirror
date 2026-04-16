@@ -1,4 +1,5 @@
 #include "info_command.hpp"
+#include "commands/errors_utils.hpp"
 #include "packet_utils.hpp"
 #include "common/protocol.hpp"
 #include "core/client.hpp"
@@ -14,15 +15,14 @@
 
 namespace client::commands {
 
-static void handleInfoError(const std::uint16_t code)
+static void handleInfoError(const std::uint16_t code, Client &clientData)
 {
     if (code == myteams::ERR_UNAUTHORIZED) {
         Printer::errorUnauthorized();
         return;
     }
     if (code == myteams::ERR_NOT_FOUND) {
-        std::cout << "Requested context entity does not exist." << std::endl;
-        return;
+        return handleNotFound(clientData);
     }
     if (code == myteams::ERR_BAD_REQUEST) {
         std::cout << "Invalid context for /info." << std::endl;
@@ -128,7 +128,7 @@ void handleInfo(Client &clientData, ParsedInput &input)
         return;
     }
 
-    handleInfoError(responseHeader.code);
+    handleInfoError(responseHeader.code, clientData);
 }
 
 } // namespace client::commands

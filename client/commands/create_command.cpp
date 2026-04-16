@@ -1,4 +1,5 @@
 #include "create_command.hpp"
+#include "commands/errors_utils.hpp"
 #include "common/protocol.hpp"
 #include "core/client.hpp"
 #include "display/printer.hpp"
@@ -88,15 +89,14 @@ static void handleCreatedReply(const CreateTarget target, const std::string &pay
         createdPayload.reply_body);
 }
 
-static void handleCreateError(const std::uint16_t code)
+static void handleCreateError(const std::uint16_t code, Client &clientData)
 {
     if (code == myteams::ERR_UNAUTHORIZED) {
         Printer::errorUnauthorized();
         return;
     }
     if (code == myteams::ERR_NOT_FOUND) {
-        std::cout << "Requested context entity does not exist." << std::endl;
-        return;
+        return handleNotFound(clientData);
     }
     if (code == myteams::ERR_BAD_REQUEST) {
         std::cout << "Invalid create request for current context." << std::endl;
@@ -158,7 +158,7 @@ void handleCreate(Client &clientData, ParsedInput &input)
         handleCreatedReply(target, responsePayload);
         return;
     }
-    handleCreateError(responseHeader.code);
+    handleCreateError(responseHeader.code, clientData);
 }
 
 } // namespace client::commands
