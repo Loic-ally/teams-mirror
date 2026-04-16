@@ -36,7 +36,6 @@ void handleLogout(Client &clientData, ParsedInput &input)
         clientData.contextTeamUuid.clear();
         clientData.contextChannelUuid.clear();
         clientData.contextThreadUuid.clear();
-        Printer::eventLoggedOut("", previousUsername);
         return;
     }
     if (responseHeader.code == myteams::ERR_UNAUTHORIZED) {

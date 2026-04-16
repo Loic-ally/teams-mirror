@@ -41,7 +41,6 @@ void handleLogin(Client &clientData, ParsedInput &input)
     if (responseHeader.code == myteams::RPL_OK) {
         clientData.connected = true;
         clientData.username = username;
-        Printer::eventLoggedIn("", clientData.username);
         return;
     }
     if (responseHeader.code == myteams::ERR_ALREADY_EXIST) {
