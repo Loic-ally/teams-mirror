@@ -1,50 +1,44 @@
 #include "messages_command.hpp"
-#include "commands/packet_utils.hpp"
 #include "common/protocol.hpp"
-#include "core/client.hpp"
 #include "display/printer.hpp"
-#include "parser/parser.hpp"
+#include "packet_utils.hpp"
 
-
+#include <ctime>
+#include <cstring>
 #include <iostream>
 #include <string>
 
 namespace client::commands {
 
-void logPrivateMessage(std::string payload) {
+static void printMessageEntry(const std::string &payload)
+{
     if (payload.size() != sizeof(myteams::PayloadRplMessage)) {
-        throw std::runtime_error("invalid RPL_MESSAGES_LIST payload size");
+        std::cout << "Malformed messages payload received from server." << std::endl;
+        return;
     }
-    myteams::PayloadRplMessage message {};
-    std::memcpy(
-        &message,
-        payload.data(),
-        sizeof(message));
-    Printer::printPrivateMessages(message.sender_uuid,
-        message.message_timestamp,
-        message.message_body);
+
+    myteams::PayloadRplMessage messagePayload {};
+    std::memcpy(&messagePayload, payload.data(), sizeof(messagePayload));
+    Printer::printPrivateMessages(
+        messagePayload.sender_uuid,
+        static_cast<std::time_t>(messagePayload.message_timestamp),
+        messagePayload.message_body);
 }
 
 void handleMessages(Client &clientData, ParsedInput &input)
 {
-    (void)clientData;
-
-    std::string uuid;
-
-    input >> uuid;
-
-    if (input.hasRemainingArgs() || input.fail()) {
-        std::cout << "Usage: messages \"user_uuid\" :" << std::endl;
+    const std::string targetUuid = input.getArg<std::string>();
+    if (input.fail() || input.hasRemainingArgs()) {
+        std::cout << "Usage: /messages \"user_uuid\"" << std::endl;
         return;
     }
-
-    if (uuid.empty()) {
-        std::cout << "Arguments cannot be empty." << std::endl;
+    if (!isUuidFormatValid(targetUuid)) {
+        std::cout << "Invalid user UUID format." << std::endl;
         return;
     }
 
     myteams::PayloadReqTargetUser payload{};
-    copyPaddedString(payload.target_uuid, uuid);
+    copyPaddedString(payload.target_uuid, sizeof(payload.target_uuid), targetUuid);
     sendPacket(*clientData.socket, buildPacket(myteams::CMD_MESSAGES, payload));
 
     while (true) {
@@ -56,15 +50,19 @@ void handleMessages(Client &clientData, ParsedInput &input)
             return;
         }
         if (responseHeader.code == myteams::RPL_MESSAGES_LIST) {
-            logPrivateMessage(responsePayload);
+            printMessageEntry(responsePayload);
             continue;
         }
-        if (responseHeader.code == myteams::ERR_ALREADY_EXIST) {
-            Printer::errorAlreadyExist();
+        if (responseHeader.code == myteams::ERR_UNAUTHORIZED) {
+            Printer::errorUnauthorized();
+            return;
+        }
+        if (responseHeader.code == myteams::ERR_NOT_FOUND) {
+            Printer::errorUnknownUser(targetUuid);
             return;
         }
         if (responseHeader.code == myteams::ERR_BAD_REQUEST) {
-            std::cout << "Invalid send request." << std::endl;
+            std::cout << "Invalid /messages request." << std::endl;
             return;
         }
         std::cout << "Server returned unexpected status: " << responseHeader.code << std::endl;

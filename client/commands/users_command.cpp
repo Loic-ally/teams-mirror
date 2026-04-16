@@ -22,21 +22,15 @@ ReceivedPacket readReplySkippingEvents(const utils::Socket &socket)
 
 void printUsersList(const std::string &payload)
 {
-    if (payload.size() % sizeof(myteams::PayloadRplUser) != 0) {
+    if (payload.size() != sizeof(myteams::PayloadRplUser)) {
         throw std::runtime_error("invalid RPL_USERS_LIST payload size");
     }
-    const std::size_t userCount = payload.size() / sizeof(myteams::PayloadRplUser);
-    for (std::size_t index = 0; index < userCount; ++index) {
-        myteams::PayloadRplUser userPayload {};
-        std::memcpy(
-            &userPayload,
-            payload.data() + (index * sizeof(myteams::PayloadRplUser)),
-            sizeof(userPayload));
-        Printer::printUsers(
-            userPayload.user_uuid,
-            userPayload.user_name,
-            static_cast<int>(userPayload.user_status));
-    }
+    myteams::PayloadRplUser userPayload {};
+    std::memcpy(&userPayload, payload.data(), sizeof(userPayload));
+    Printer::printUsers(
+        userPayload.user_uuid,
+        userPayload.user_name,
+        static_cast<int>(userPayload.user_status));
 }
 
 } // namespace users_command_detail
@@ -51,11 +45,11 @@ void handleUsers(Client &clientData, ParsedInput &input)
     for (;;) {
         const auto reply = users_command_detail::readReplySkippingEvents(*clientData.socket);
         if (reply.header.code == myteams::RPL_OK) {
-            continue;
+            return;
         }
         if (reply.header.code == myteams::RPL_USERS_LIST) {
             users_command_detail::printUsersList(reply.payload);
-            return;
+            continue;
         }
         if (reply.header.code == myteams::ERR_UNAUTHORIZED) {
             Printer::errorUnauthorized();

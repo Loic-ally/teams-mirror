@@ -64,7 +64,6 @@ static void handleEvent(client::Client &clientData) {
     while(clientData.socket->poll(POLLIN) & POLLIN) {
         myteams::PacketHeader header;
         std::string out;
-        std::cout << header.code << " " << header.payload_size << "\n";
         client::commands::readServerPacket(*clientData.socket, header, out);
         client::commands::handleAsyncEventPacket(header.code, out);
     }
