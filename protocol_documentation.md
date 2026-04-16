@@ -212,13 +212,24 @@ representation for `int` and `std::uint64_t` — implementations MUST have a fix
 | `message_body` | `char[MAX_BODY_LENGTH]` | Content of the private message |
 
 ### 6.1.4 PayloadReqTeamTarget
-*Used with:* `CMD_SUBSCRIBE`, `CMD_UNSUBSCRIBE`, `CMD_USE`
+*Used with:* `CMD_SUBSCRIBE`, `CMD_UNSUBSCRIBE`
 
 | Field | Type | Description |
 |---|---|---|
 | `team_uuid` | `char[UUID_LENGTH]` | UUID of the target team |
 
-### 6.1.5 PayloadReqCreateTeam
+### 6.1.5 PayloadReqUse
+*Used with:* `CMD_USE`
+
+| Field | Type | Description |
+|---|---|---|
+| `team_uuid` | `char[UUID_LENGTH]` | UUID of the target team (optional) |
+| `channel_uuid` | `char[UUID_LENGTH]` | UUID of the target channel (optional) |
+| `thread_uuid` | `char[UUID_LENGTH]` | UUID of the target thread (optional) |
+
+> Empty context levels are encoded as zero-filled strings.
+
+### 6.1.6 PayloadReqCreateTeam
 *Used with:* `CMD_CREATE` (team context)
 
 | Field | Type | Description |
@@ -226,7 +237,7 @@ representation for `int` and `std::uint64_t` — implementations MUST have a fix
 | `team_name` | `char[MAX_NAME_LENGTH]` | Name of the team to create |
 | `team_description` | `char[MAX_DESCRIPTION_LENGTH]` | Description of the team |
 
-### 6.1.6 PayloadReqCreateChannel
+### 6.1.7 PayloadReqCreateChannel
 *Used with:* `CMD_CREATE` (channel context)
 
 | Field | Type | Description |
@@ -234,7 +245,7 @@ representation for `int` and `std::uint64_t` — implementations MUST have a fix
 | `channel_name` | `char[MAX_NAME_LENGTH]` | Name of the channel to create |
 | `channel_description` | `char[MAX_DESCRIPTION_LENGTH]` | Description of the channel |
 
-### 6.1.7 PayloadReqCreateThread
+### 6.1.8 PayloadReqCreateThread
 *Used with:* `CMD_CREATE` (thread context)
 
 | Field | Type | Description |
@@ -242,7 +253,7 @@ representation for `int` and `std::uint64_t` — implementations MUST have a fix
 | `thread_title` | `char[MAX_NAME_LENGTH]` | Title of the thread |
 | `thread_body` | `char[MAX_BODY_LENGTH]` | Body/content of the opening message |
 
-### 6.1.8 PayloadReqCreateReply
+### 6.1.9 PayloadReqCreateReply
 *Used with:* `CMD_CREATE` (reply context)
 
 | Field | Type | Description |
@@ -398,14 +409,14 @@ responses for each command.
 | `CMD_SUBSCRIBE` | `PayloadReqTeamTarget` | `RPL_OK` | `ERR_NOT_FOUND`, `ERR_ALREADY_EXIST` |
 | `CMD_UNSUBSCRIBE` | `PayloadReqTeamTarget` | `RPL_OK` | `ERR_NOT_FOUND`, `ERR_FORBIDDEN` |
 | `CMD_SUBSCRIBED_LIST` | *(none)* | `RPL_SUBSCRIBED_LIST` × N, `RPL_OK` | `ERR_UNAUTHORIZED` |
-| `CMD_USE` | `PayloadReqTeamTarget` | `RPL_OK` | `ERR_NOT_FOUND`, `ERR_FORBIDDEN` |
+| `CMD_USE` | `PayloadReqUse` | `RPL_OK` | `ERR_BAD_REQUEST`, `ERR_UNAUTHORIZED` |
 | `CMD_CREATE` (team) | `PayloadReqCreateTeam` | `RPL_CREATED` + `EVT_TEAM_CREATED` → all | `ERR_ALREADY_EXIST` |
-| `CMD_CREATE` (channel) | `PayloadReqCreateChannel` | `RPL_CREATED` + `EVT_CHANNEL_CREATED` → subscribers | `ERR_ALREADY_EXIST`, `ERR_FORBIDDEN` |
-| `CMD_CREATE` (thread) | `PayloadReqCreateThread` | `RPL_CREATED` + `EVT_THREAD_CREATED` → subscribers | `ERR_FORBIDDEN` |
-| `CMD_CREATE` (reply) | `PayloadReqCreateReply` | `RPL_CREATED` + `EVT_REPLY_CREATED` → subscribers | `ERR_FORBIDDEN` |
+| `CMD_CREATE` (channel) | `PayloadReqCreateChannel` | `RPL_CREATED` + `EVT_CHANNEL_CREATED` → subscribers | `ERR_ALREADY_EXIST`, `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
+| `CMD_CREATE` (thread) | `PayloadReqCreateThread` | `RPL_CREATED` + `EVT_THREAD_CREATED` → subscribers | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
+| `CMD_CREATE` (reply) | `PayloadReqCreateReply` | `RPL_CREATED` + `EVT_REPLY_CREATED` → subscribers | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
 | `CMD_LIST` (teams) | *(none)* | `RPL_TEAMS_LIST` × N, `RPL_OK` | `ERR_UNAUTHORIZED` |
-| `CMD_LIST` (channels) | *(none)* | `RPL_CHANNELS_LIST` × N, `RPL_OK` | `ERR_FORBIDDEN` |
-| `CMD_LIST` (threads) | *(none)* | `RPL_THREADS_LIST` × N, `RPL_OK` | `ERR_FORBIDDEN` |
+| `CMD_LIST` (channels) | *(none)* | `RPL_CHANNELS_LIST` × N, `RPL_OK` | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
+| `CMD_LIST` (threads) | *(none)* | `RPL_THREADS_LIST` × N, `RPL_OK` | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
 | `CMD_INFO` | *(none)* | Context-dependent reply | `ERR_BAD_REQUEST` |
 
 ---

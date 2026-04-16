@@ -3,6 +3,9 @@
 #include "commands/command_context.hpp"
 #include "protocol.hpp"
 #include "server/commands/command_utils.hpp"
+
+#include <algorithm>
+#include <cstring>
 #include <exception>
 #include <iostream>
 #include <string>
@@ -37,12 +40,25 @@ void handleMessagesCommand(CommandContext &context) {
 
     myteams::PayloadReqTargetUser payload {};
     std::memcpy(&payload, context.payloadData.data(), sizeof(payload));
+    std::string targetUuid;
+    if (!extractFixedString(payload.target_uuid, sizeof(payload.target_uuid), targetUuid)
+        || !isUuidFormatValid(targetUuid)) {
+        queueStatus(context, myteams::ERR_BAD_REQUEST);
+        return;
+    }
+    if (!findUserByUuid(context.users, targetUuid).has_value()) {
+        queueStatus(context, myteams::ERR_NOT_FOUND);
+        return;
+    }
 
     std::vector<myteams::Message> filteredMessages;
 
     for (const auto& msg : context.messages) {
-        if (msg.getAuthorUuid() == payload.target_uuid &&
-            msg.getReceiverUuid() == client->second) {
+        const bool isTargetToClient =
+            msg.getAuthorUuid() == targetUuid && msg.getReceiverUuid() == client->second;
+        const bool isClientToTarget =
+            msg.getAuthorUuid() == client->second && msg.getReceiverUuid() == targetUuid;
+        if (isTargetToClient || isClientToTarget) {
             filteredMessages.push_back(msg);
         }
     }
