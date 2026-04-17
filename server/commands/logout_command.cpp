@@ -62,9 +62,9 @@ void handleClientDisconnection(
     }
     const auto user = findUserByUuid(users, authenticatedUserIt->second);
     auto &listSocket = authenticatedUsersByUUID[authenticatedUserIt->second];
+    const auto authenticatedUserUUIDIt = authenticatedUsersByUUID.find(authenticatedUserIt->second);
     std::erase(listSocket, clientFd);
     authenticatedUsersByFd.erase(authenticatedUserIt);
-    const auto authenticatedUserUUIDIt = authenticatedUsersByUUID.find(authenticatedUserIt->second);
     if (authenticatedUserUUIDIt == authenticatedUsersByUUID.end()) {
         return;
     }
