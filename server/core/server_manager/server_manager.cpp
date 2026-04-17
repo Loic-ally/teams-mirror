@@ -252,6 +252,12 @@ ServerManager::initializeTcpListener(const std::int32_t backlog)
     _listenSocket = std::move(listenSocket);
 }
 
+void ServerManager::logoutUsers(AuthenticatedUserByFd &users) {
+    for (const auto &user : users) {
+        ServerLogger::logUserLoggedOut(user.second);
+    }
+}
+
 void
 ServerManager::runPollLoop()
 {
@@ -334,6 +340,7 @@ ServerManager::runPollLoop()
                 authenticatedUsersByUUID);
         }
     }
+    logoutUsers(authenticatedUsersByFd);
     clientSockets.clear();
     database::DatabaseSaver databaseSaver;
     if (!databaseSaver.save(_users, _teams, _messages)) {

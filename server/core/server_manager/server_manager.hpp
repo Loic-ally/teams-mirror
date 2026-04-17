@@ -1,6 +1,7 @@
 #ifndef SERVER_MANAGER_HPP
 #define SERVER_MANAGER_HPP
 
+#include "commands/command_context.hpp"
 #ifdef _WIN32
 #pragma once
 #endif
@@ -44,6 +45,7 @@ class ServerManager {
 	private:
 		static void handleSignal(std::int32_t signal) noexcept;
 		static void installSignalHandler();
+        static void logoutUsers(commands::AuthenticatedUserByFd &users);
 
 		static std::int32_t pollSockets(std::vector<struct pollfd> &pollFds, std::int32_t timeoutMs);
 
