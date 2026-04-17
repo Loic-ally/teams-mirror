@@ -7,12 +7,12 @@ namespace client::commands {
             return;
         }
         if (!clientData.contextChannelUuid.empty()) {
-        Printer::errorUnknownChannel(clientData.contextChannelUuid);
-        return;
+            Printer::errorUnknownChannel(clientData.contextChannelUuid);
+            return;
+        }
+        if (!clientData.contextTeamUuid.empty()) {
+            Printer::errorUnknownTeam(clientData.contextTeamUuid);
+            return;
+        }
     }
-    if (!clientData.contextTeamUuid.empty()) {
-        Printer::errorUnknownTeam(clientData.contextTeamUuid);
-        return;
-    }
-}
 }
