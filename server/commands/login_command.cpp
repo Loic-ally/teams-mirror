@@ -33,7 +33,9 @@ void handleLoginCommand(CommandContext &context)
 
         const std::string eventPacket =
             buildUserConnectionEventPacket(myteams::EVT_LOGGED_IN, user.getUuid(), user.getName());
-        broadcastPacket(context, eventPacket);
+        for (const auto &[socketFd, _] : context.authenticatedUsersByFd) {
+            queuePacket(context.clientManager, socketFd, eventPacket);
+        }
     };
 
     const auto existingUser = findUserByName(context.users, requestedUserName);
