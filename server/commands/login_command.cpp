@@ -27,7 +27,7 @@ void handleLoginCommand(CommandContext &context)
     }
     const auto completeLogin = [&context](myteams::User &user) {
         context.authenticatedUsersByFd[context.clientFd] = std::string(user.getUuid());
-        context.authenticatedUsersByUUID[std::string(user.getUuid())] = context.clientFd;
+        context.authenticatedUsersByUUID[std::string(user.getUuid())].push_back(context.clientFd);
         ServerLogger::logUserLoggedIn(user.getUuid());
         queueStatus(context, myteams::RPL_OK);
 
@@ -49,11 +49,7 @@ void handleLoginCommand(CommandContext &context)
         return;
     } else {
         myteams::User &user = existingUser->get();
-        if (user.isLoggedIn()) {
-            queueStatus(context, myteams::ERR_ALREADY_EXIST);
-            return;
-        }
-        user.setLoggedIn(true);
+        user.addLoggedIn();
         completeLogin(user);
     }
 }

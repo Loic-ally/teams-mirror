@@ -272,7 +272,7 @@ ServerManager::runPollLoop()
     ClientManager clientManager;
 
     for (myteams::User &user : _users) {
-        user.setLoggedIn(false);
+        user.resetLoggedIn();
         ServerLogger::logUserLoaded(user.getUuid(), user.getName());
     }
 

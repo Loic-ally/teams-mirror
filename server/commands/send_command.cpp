@@ -9,19 +9,17 @@
 namespace server::commands {
 
 static void sendMessage(CommandContext &context, const myteams::Message &msg) {
-
-    const auto &receiver = context.authenticatedUsersByUUID.find(std::string(msg.getReceiverUuid()));
+    const auto &receivers = context.authenticatedUsersByUUID[std::string(msg.getReceiverUuid())];
 
     myteams::PayloadEvtPrivateMsg payload {};
     copyPaddedString(payload.message_body, msg.getBody());
     copyPaddedString(payload.sender_uuid, msg.getAuthorUuid());
     ServerLogger::logPrivateMessageSent(msg.getAuthorUuid(), msg.getReceiverUuid(), msg.getBody());
-    if (receiver == context.authenticatedUsersByUUID.end()) {
-        return;
+    for (const auto receiver : receivers) {
+        queuePacket(context.clientManager,
+            receiver,
+            buildPacket(myteams::EVT_PRIVATE_MSG_RCVD, payload));
     }
-    queuePacket(context.clientManager,
-        receiver->second,
-        buildPacket(myteams::EVT_PRIVATE_MSG_RCVD, payload));
 }
 
 void handleSendCommand(CommandContext &context) {

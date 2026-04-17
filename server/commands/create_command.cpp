@@ -150,6 +150,13 @@ static void queuePacketToTeamSubscribers(CommandContext &context, const myteams:
     }
 }
 
+static void queuePacketToLogedUser(CommandContext &context, const std::string &packet)
+{
+    for (const auto &[socketFd, _] : context.authenticatedUsersByFd) {
+        queuePacket(context.clientManager, socketFd, packet);
+    }
+}
+
 static void handleCreateTeam(CommandContext &context, myteams::User &authenticatedUser)
 {
     std::string teamName;
@@ -184,7 +191,7 @@ static void handleCreateTeam(CommandContext &context, myteams::User &authenticat
     copyPaddedString(eventPayload.team_uuid, sizeof(eventPayload.team_uuid), createdTeam.getUuid());
     copyPaddedString(eventPayload.team_name, sizeof(eventPayload.team_name), createdTeam.getName());
     copyPaddedString(eventPayload.team_description, sizeof(eventPayload.team_description), createdTeam.getDescription());
-    broadcastPacket(
+    queuePacketToLogedUser(
         context,
         buildPacket(myteams::EVT_TEAM_CREATED, eventPayload));
 }

@@ -22,7 +22,7 @@ namespace server::commands {
 
 using ClientSockets = std::unordered_map<std::int32_t, std::unique_ptr<utils::Socket>>;
 using AuthenticatedUserByFd = std::unordered_map<std::int32_t, std::string>;
-using AuthenticatedUserByUUID = std::unordered_map<std::string, std::int32_t>;
+using AuthenticatedUserByUUID = std::unordered_map<std::string, std::vector<std::int32_t>>;
 
 struct CommandContext {
     ClientManager &clientManager;
