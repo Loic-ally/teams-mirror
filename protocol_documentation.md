@@ -406,18 +406,18 @@ responses for each command.
 | `CMD_USER_INFO` | `PayloadReqTargetUser` | `RPL_USER_INFO` | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
 | `CMD_SEND` | `PayloadReqSendMsg` | `RPL_OK` | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
 | `CMD_MESSAGES` | `PayloadReqTargetUser` | `RPL_MESSAGES_LIST` × N, `RPL_OK` | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
-| `CMD_SUBSCRIBE` | `PayloadReqTeamTarget` | `RPL_OK` | `ERR_NOT_FOUND`, `ERR_ALREADY_EXIST` |
-| `CMD_UNSUBSCRIBE` | `PayloadReqTeamTarget` | `RPL_OK` | `ERR_NOT_FOUND`, `ERR_FORBIDDEN` |
+| `CMD_SUBSCRIBE` | `PayloadReqTeamTarget` | `RPL_USER_INFO` or `RPL_OK` | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
+| `CMD_UNSUBSCRIBE` | `PayloadReqTeamTarget` | `RPL_USER_INFO` or `RPL_OK` | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
 | `CMD_SUBSCRIBED_LIST` | *(none)* | `RPL_SUBSCRIBED_LIST` × N, `RPL_OK` | `ERR_UNAUTHORIZED` |
 | `CMD_USE` | `PayloadReqUse` | `RPL_OK` | `ERR_BAD_REQUEST`, `ERR_UNAUTHORIZED` |
-| `CMD_CREATE` (team) | `PayloadReqCreateTeam` | `RPL_CREATED` + `EVT_TEAM_CREATED` → all | `ERR_ALREADY_EXIST` |
+| `CMD_CREATE` (team) | `PayloadReqCreateTeam` | `RPL_CREATED` + `EVT_TEAM_CREATED` → all | `ERR_ALREADY_EXIST`, `ERR_UNAUTHORIZED` |
 | `CMD_CREATE` (channel) | `PayloadReqCreateChannel` | `RPL_CREATED` + `EVT_CHANNEL_CREATED` → subscribers | `ERR_ALREADY_EXIST`, `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
 | `CMD_CREATE` (thread) | `PayloadReqCreateThread` | `RPL_CREATED` + `EVT_THREAD_CREATED` → subscribers | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
 | `CMD_CREATE` (reply) | `PayloadReqCreateReply` | `RPL_CREATED` + `EVT_REPLY_CREATED` → subscribers | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
 | `CMD_LIST` (teams) | *(none)* | `RPL_TEAMS_LIST` × N, `RPL_OK` | `ERR_UNAUTHORIZED` |
 | `CMD_LIST` (channels) | *(none)* | `RPL_CHANNELS_LIST` × N, `RPL_OK` | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
 | `CMD_LIST` (threads) | *(none)* | `RPL_THREADS_LIST` × N, `RPL_OK` | `ERR_NOT_FOUND`, `ERR_UNAUTHORIZED` |
-| `CMD_INFO` | *(none)* | Context-dependent reply | `ERR_BAD_REQUEST` |
+| `CMD_INFO` | *(none)* | Context-dependent reply | `ERR_BAD_REQUEST`, `ERR_UNAUTHORIZED` |
 
 ---
 

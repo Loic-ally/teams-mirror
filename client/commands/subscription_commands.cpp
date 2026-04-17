@@ -83,7 +83,12 @@ void handleSubscribe(Client &clientData, ParsedInput &input)
     readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::RPL_OK) {
-        Printer::printSubscribed("", teamUuid);
+        return;
+    }
+    if (responseHeader.code == myteams::RPL_USERS_LIST) {
+        myteams::PayloadRplUser userPayload {};
+        std::memcpy(&userPayload, responsePayload.data(), sizeof(userPayload));
+        Printer::printSubscribed(userPayload.user_uuid, teamUuid);
         return;
     }
     handleCommonError(responseHeader.code, teamUuid);
@@ -112,7 +117,12 @@ void handleUnsubscribe(Client &clientData, ParsedInput &input)
     readServerReply(*clientData.socket, responseHeader, responsePayload);
 
     if (responseHeader.code == myteams::RPL_OK) {
-        Printer::printUnsubscribed("", teamUuid);
+        return;
+    }
+    if (responseHeader.code == myteams::RPL_USERS_LIST) {
+        myteams::PayloadRplUser userPayload {};
+        std::memcpy(&userPayload, responsePayload.data(), sizeof(userPayload));
+        Printer::printUnsubscribed(userPayload.user_uuid, teamUuid);
         return;
     }
     if (responseHeader.code == myteams::ERR_FORBIDDEN) {
