@@ -150,7 +150,6 @@ removeClientAt(
         clientManager,
         clientFd,
         users,
-        clientSockets,
         authenticatedUsersByFd,
         authenticatedUsersByUUID);
     clientSockets.erase(clientFd);

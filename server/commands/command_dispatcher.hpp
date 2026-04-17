@@ -29,7 +29,6 @@ void handleClientDisconnection(
     ClientManager &clientManager,
     std::int32_t clientFd,
     std::vector<myteams::User> &users,
-    const ClientSockets &clientSockets,
     AuthenticatedUserByFd &authenticatedUsersByFd,
     AuthenticatedUserByUUID &authenticatedUsersByUUID
 );
