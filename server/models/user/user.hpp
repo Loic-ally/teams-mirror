@@ -1,6 +1,7 @@
 #ifndef SERVER_MODELS_USER_USER_HPP
 #define SERVER_MODELS_USER_USER_HPP
 
+#include <cstdint>
 #ifdef _WIN32
 #pragma once
 #endif
@@ -40,7 +41,7 @@ namespace myteams
 
         bool isLoggedIn() const noexcept
         {
-            return is_logged_in_;
+            return is_logged_in_ >= 1;
         }
 
         void setUuid(const std::string &uuid) noexcept
@@ -53,9 +54,22 @@ namespace myteams
             copy_buffer(name_, name);
         }
 
-        void setLoggedIn(bool is_logged_in) noexcept
+        void resetLoggedIn() noexcept {
+            is_logged_in_ = 0;
+        }
+
+        void addLoggedIn() noexcept
         {
-            is_logged_in_ = is_logged_in;
+            is_logged_in_ += 1;
+        }
+
+        void removeLoggedIn() noexcept
+        {
+            if (is_logged_in_ <= 0) {
+                is_logged_in_ = 0;
+            } else {
+                is_logged_in_ -= 1;
+            }
         }
 
     private:
@@ -69,7 +83,7 @@ namespace myteams
 
         char uuid_[UUID_LENGTH] {};
         char name_[MAX_NAME_LENGTH] {};
-        bool is_logged_in_ = false;
+        std::int32_t is_logged_in_ = 0;
     };
 } // namespace myteams
 

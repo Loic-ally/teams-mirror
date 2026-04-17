@@ -1,4 +1,5 @@
 #include "server/commands/create_command.hpp"
+#include "protocol.hpp"
 #include "server/commands/command_utils.hpp"
 #include "server/core/client_manager/client_manager.hpp"
 #include "server/core/logger/server_logger.hpp"
@@ -149,12 +150,25 @@ static void queuePacketToTeamSubscribers(CommandContext &context, const myteams:
     }
 }
 
+static void queuePacketToLogedUser(CommandContext &context, const std::string &packet)
+{
+    for (const auto &[socketFd, _] : context.authenticatedUsersByFd) {
+        queuePacket(context.clientManager, socketFd, packet);
+    }
+}
+
 static void handleCreateTeam(CommandContext &context, myteams::User &authenticatedUser)
 {
     std::string teamName;
     std::string teamDescription;
     if (!parseCreateTeamPayload(context, teamName, teamDescription)) {
         return;
+    }
+
+    for (const auto &team : context.teams) {
+        if (team.getName() == teamName) {
+            return queueStatus(context, myteams::ERR_ALREADY_EXIST);
+        }
     }
 
     const std::string teamUuid = generateUniqueTeamUuid(context.teams);
@@ -177,7 +191,7 @@ static void handleCreateTeam(CommandContext &context, myteams::User &authenticat
     copyPaddedString(eventPayload.team_uuid, sizeof(eventPayload.team_uuid), createdTeam.getUuid());
     copyPaddedString(eventPayload.team_name, sizeof(eventPayload.team_name), createdTeam.getName());
     copyPaddedString(eventPayload.team_description, sizeof(eventPayload.team_description), createdTeam.getDescription());
-    broadcastPacket(
+    queuePacketToLogedUser(
         context,
         buildPacket(myteams::EVT_TEAM_CREATED, eventPayload));
 }
@@ -227,6 +241,12 @@ static void handleCreateChannel(CommandContext &context, myteams::User &authenti
         return;
     }
 
+    for (const auto &channel : team->get().getChannels()) {
+        if (channel.getName() == channelName) {
+            return queueStatus(context, myteams::ERR_ALREADY_EXIST);
+        }
+    }
+
     const std::string channelUuid = generateUniqueChannelUuid(context.teams);
     resolvedTeam.addChannel(myteams::Channel(channelUuid, channelName, channelDescription));
 
@@ -265,6 +285,12 @@ static void handleCreateThread(CommandContext &context, myteams::User &authentic
     }
     myteams::Team &team = teamChannel->first.get();
     myteams::Channel &channel = teamChannel->second.get();
+
+    for (const auto &thread : channel.getThreads()) {
+        if (thread.getTitle() == threadTitle) {
+            return queueStatus(context, myteams::ERR_ALREADY_EXIST);
+        }
+    }
 
     const std::string threadUuid = generateUniqueThreadUuid(context.teams);
     const std::time_t now = std::time(nullptr);

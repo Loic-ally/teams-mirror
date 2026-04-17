@@ -272,7 +272,7 @@ ServerManager::runPollLoop()
     ClientManager clientManager;
 
     for (myteams::User &user : _users) {
-        user.setLoggedIn(false);
+        user.resetLoggedIn();
         ServerLogger::logUserLoaded(user.getUuid(), user.getName());
     }
 
@@ -299,6 +299,7 @@ ServerManager::runPollLoop()
                 continue;
             }
             if (currentFd == listenFd) {
+                currentPollFd.revents = 0;
                 if ((currentEvents & POLLIN) != 0) {
                     std::unique_ptr<utils::Socket> acceptedSocket = acceptClientSocket(*_listenSocket);
                     const std::int32_t clientFd = acceptedSocket->getFd();
@@ -306,7 +307,6 @@ ServerManager::runPollLoop()
                     clientManager.addClient(clientFd);
                     appendClientPollFd(pollFds, clientFd);
                 }
-                currentPollFd.revents = 0;
                 ++index;
                 continue;
             }

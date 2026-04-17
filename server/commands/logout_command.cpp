@@ -32,6 +32,8 @@ void handleLogoutCommand(CommandContext &context)
     }
 
     const auto user = findUserByUuid(context.users, authenticatedUserIt->second);
+    auto &listSocket = context.authenticatedUsersByUUID[authenticatedUserIt->second];
+    std::erase(listSocket, context.clientFd);
     context.authenticatedUsersByFd.erase(authenticatedUserIt);
     if (!user.has_value()) {
         queueStatus(context, myteams::ERR_UNAUTHORIZED);
@@ -39,7 +41,7 @@ void handleLogoutCommand(CommandContext &context)
     }
     myteams::User &resolvedUser = user->get();
 
-    resolvedUser.setLoggedIn(false);
+    resolvedUser.removeLoggedIn();
     ServerLogger::logUserLoggedOut(resolvedUser.getUuid());
     queueStatus(context, myteams::RPL_OK);
     broadcastLoggedOutEvent(context.clientManager, context.clientSockets, resolvedUser);
@@ -59,8 +61,10 @@ void handleClientDisconnection(
         return;
     }
     const auto user = findUserByUuid(users, authenticatedUserIt->second);
-    authenticatedUsersByFd.erase(authenticatedUserIt);
+    auto &listSocket = authenticatedUsersByUUID[authenticatedUserIt->second];
     const auto authenticatedUserUUIDIt = authenticatedUsersByUUID.find(authenticatedUserIt->second);
+    std::erase(listSocket, clientFd);
+    authenticatedUsersByFd.erase(authenticatedUserIt);
     if (authenticatedUserUUIDIt == authenticatedUsersByUUID.end()) {
         return;
     }
@@ -69,7 +73,7 @@ void handleClientDisconnection(
         return;
     }
     myteams::User &resolvedUser = user->get();
-    resolvedUser.setLoggedIn(false);
+    resolvedUser.removeLoggedIn();
     ServerLogger::logUserLoggedOut(resolvedUser.getUuid());
     broadcastLoggedOutEvent(clientManager, clientSockets, resolvedUser, clientFd);
 }
