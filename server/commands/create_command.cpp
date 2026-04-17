@@ -1,4 +1,5 @@
 #include "server/commands/create_command.hpp"
+#include "protocol.hpp"
 #include "server/commands/command_utils.hpp"
 #include "server/core/client_manager/client_manager.hpp"
 #include "server/core/logger/server_logger.hpp"
@@ -157,6 +158,12 @@ static void handleCreateTeam(CommandContext &context, myteams::User &authenticat
         return;
     }
 
+    for (const auto &team : context.teams) {
+        if (team.getName() == teamName) {
+            return queueStatus(context, myteams::ERR_ALREADY_EXIST);
+        }
+    }
+
     const std::string teamUuid = generateUniqueTeamUuid(context.teams);
     context.teams.emplace_back(teamUuid, teamName, teamDescription);
     myteams::Team &createdTeam = context.teams.back();
@@ -227,6 +234,12 @@ static void handleCreateChannel(CommandContext &context, myteams::User &authenti
         return;
     }
 
+    for (const auto &channel : team->get().getChannels()) {
+        if (channel.getName() == channelName) {
+            return queueStatus(context, myteams::ERR_ALREADY_EXIST);
+        }
+    }
+
     const std::string channelUuid = generateUniqueChannelUuid(context.teams);
     resolvedTeam.addChannel(myteams::Channel(channelUuid, channelName, channelDescription));
 
@@ -265,6 +278,12 @@ static void handleCreateThread(CommandContext &context, myteams::User &authentic
     }
     myteams::Team &team = teamChannel->first.get();
     myteams::Channel &channel = teamChannel->second.get();
+
+    for (const auto &thread : channel.getThreads()) {
+        if (thread.getTitle() == threadTitle) {
+            return queueStatus(context, myteams::ERR_ALREADY_EXIST);
+        }
+    }
 
     const std::string threadUuid = generateUniqueThreadUuid(context.teams);
     const std::time_t now = std::time(nullptr);
