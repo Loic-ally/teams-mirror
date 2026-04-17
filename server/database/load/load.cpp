@@ -92,15 +92,15 @@ parseRecord(
 {
 	fields = splitEscapedLine(line, format.delimiter);
 	if (fields.size() != format.expectedFieldCount) {
-		std::cerr << "Skipping malformed " << format.sourceName << " line: " << line << std::endl;
+		std::cout << "Skipping malformed " << format.sourceName << " line: " << line << std::endl;
 		return false;
 	}
 	if (format.requireFirstField && fields.at(0).empty()) {
-		std::cerr << "Skipping malformed " << format.sourceName << " line: " << line << std::endl;
+		std::cout << "Skipping malformed " << format.sourceName << " line: " << line << std::endl;
 		return false;
 	}
 	if (format.requireSecondField && fields.at(1).empty()) {
-		std::cerr << "Skipping malformed " << format.sourceName << " line: " << line << std::endl;
+		std::cout << "Skipping malformed " << format.sourceName << " line: " << line << std::endl;
 		return false;
 	}
 	return true;
@@ -114,7 +114,7 @@ readTextFile(const std::filesystem::path &filePath, std::vector<std::string> &li
 		if (!std::filesystem::exists(filePath))
 			std::cout << "No save file found: " << filePath << std::endl;
 		else
-			std::cerr << "Failed to open save file: " << filePath << std::endl;
+			std::cout << "Failed to open save file: " << filePath << std::endl;
 		return false;
 	}
 
@@ -163,7 +163,7 @@ loadPrivateMessages(const std::vector<std::string> &privateMessageLines, char de
 			continue;
 		std::time_t createdAt = 0;
 		if (!parseTimeValue(fields.at(2), createdAt)) {
-			std::cerr << "Skipping message with invalid timestamp: " << line << std::endl;
+			std::cout << "Skipping message with invalid timestamp: " << line << std::endl;
 			continue;
 		}
 		messages.emplace_back(
@@ -190,7 +190,7 @@ loadTeams(
 		if (!parseRecord(line, teamFormat, fields))
 			continue;
 		if (teamIndexes.find(fields.at(0)) != teamIndexes.end()) {
-			std::cerr << "Skipping duplicate team uuid: " << fields.at(0) << std::endl;
+			std::cout << "Skipping duplicate team uuid: " << fields.at(0) << std::endl;
 			continue;
 		}
 
@@ -226,7 +226,7 @@ loadTeamSubscriptions(
 
 		const auto teamIt = teamIndexes.find(fields.at(0));
 		if (teamIt == teamIndexes.end()) {
-			std::cerr << "Skipping team subscription with unknown team uuid: " << fields.at(0) << std::endl;
+			std::cout << "Skipping team subscription with unknown team uuid: " << fields.at(0) << std::endl;
 			continue;
 		}
 		loadedTeams.at(teamIt->second).subscribedUsers.push_back(fields.at(1));
@@ -249,12 +249,12 @@ loadChannels(
 		if (!parseRecord(line, channelFormat, fields))
 			continue;
 		if (channelIndexes.find(fields.at(1)) != channelIndexes.end()) {
-			std::cerr << "Skipping duplicate channel uuid: " << fields.at(1) << std::endl;
+			std::cout << "Skipping duplicate channel uuid: " << fields.at(1) << std::endl;
 			continue;
 		}
 		const auto teamIt = teamIndexes.find(fields.at(0));
 		if (teamIt == teamIndexes.end()) {
-			std::cerr << "Skipping channel with unknown team uuid: " << fields.at(0) << std::endl;
+			std::cout << "Skipping channel with unknown team uuid: " << fields.at(0) << std::endl;
 			continue;
 		}
 		std::vector<LoadedChannel> &channels = loadedTeams.at(teamIt->second).channels;
@@ -283,17 +283,17 @@ loadThreads(
 		if (!parseRecord(line, threadFormat, fields))
 			continue;
 		if (threadIndexes.find(fields.at(1)) != threadIndexes.end()) {
-			std::cerr << "Skipping duplicate thread uuid: " << fields.at(1) << std::endl;
+			std::cout << "Skipping duplicate thread uuid: " << fields.at(1) << std::endl;
 			continue;
 		}
 		std::time_t createdAt = 0;
 		if (!parseTimeValue(fields.at(3), createdAt)) {
-			std::cerr << "Skipping thread with invalid timestamp: " << line << std::endl;
+			std::cout << "Skipping thread with invalid timestamp: " << line << std::endl;
 			continue;
 		}
 		const auto channelIt = channelIndexes.find(fields.at(0));
 		if (channelIt == channelIndexes.end()) {
-			std::cerr << "Skipping thread with unknown channel uuid: " << fields.at(0) << std::endl;
+			std::cout << "Skipping thread with unknown channel uuid: " << fields.at(0) << std::endl;
 			continue;
 		}
 		const std::size_t teamIndex = channelIt->second.teamIndex;
@@ -329,12 +329,12 @@ loadMessages(
 			continue;
 		std::time_t createdAt = 0;
 		if (!parseTimeValue(fields.at(3), createdAt)) {
-			std::cerr << "Skipping message with invalid timestamp: " << line << std::endl;
+			std::cout << "Skipping message with invalid timestamp: " << line << std::endl;
 			continue;
 		}
 		const auto threadIt = threadIndexes.find(fields.at(0));
 		if (threadIt == threadIndexes.end()) {
-			std::cerr << "Skipping message with unknown thread uuid: " << fields.at(0) << std::endl;
+			std::cout << "Skipping message with unknown thread uuid: " << fields.at(0) << std::endl;
 			continue;
 		}
 		const ThreadPosition &threadPosition = threadIt->second;

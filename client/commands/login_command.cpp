@@ -43,10 +43,6 @@ void handleLogin(Client &clientData, ParsedInput &input)
         clientData.username = username;
         return;
     }
-    if (responseHeader.code == myteams::ERR_ALREADY_EXIST) {
-        Printer::errorAlreadyExist();
-        return;
-    }
     if (responseHeader.code == myteams::ERR_BAD_REQUEST) {
         std::cout << "Invalid login request." << std::endl;
         return;

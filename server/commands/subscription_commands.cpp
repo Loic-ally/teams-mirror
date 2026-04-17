@@ -1,4 +1,6 @@
 #include "server/commands/subscription_commands.hpp"
+#include "models/user/user.hpp"
+#include "protocol.hpp"
 #include "server/commands/command_utils.hpp"
 #include "server/core/logger/server_logger.hpp"
 
@@ -7,6 +9,17 @@
 #include <vector>
 
 namespace server::commands {
+
+    static void queueUserInfo(const CommandContext &context, const myteams::User &user) {
+        myteams::PayloadRplUser payload {};
+        copyPaddedString(payload.user_uuid, sizeof(payload.user_uuid), user.getUuid());
+        copyPaddedString(payload.user_name, sizeof(payload.user_name), user.getName());
+        payload.user_status = user.isLoggedIn() ? 1U : 0U;
+        queuePacket(
+            context.clientManager,
+            context.clientFd,
+            buildPacket(myteams::RPL_USERS_LIST, payload));
+    }
 
 static bool parseTeamUuidFromPayload(CommandContext &context, std::string &outTeamUuid)
 {
@@ -52,14 +65,7 @@ static void queueUsersList(CommandContext &context, const myteams::Team &team)
             continue;
         }
         const myteams::User &resolvedUser = user->get();
-        myteams::PayloadRplUser payload {};
-        copyPaddedString(payload.user_uuid, sizeof(payload.user_uuid), resolvedUser.getUuid());
-        copyPaddedString(payload.user_name, sizeof(payload.user_name), resolvedUser.getName());
-        payload.user_status = resolvedUser.isLoggedIn() ? 1U : 0U;
-        queuePacket(
-            context.clientManager,
-            context.clientFd,
-            buildPacket(myteams::RPL_USERS_LIST, payload));
+        queueUserInfo(context, resolvedUser);
     }
     queueStatus(context, myteams::RPL_OK);
 }
@@ -85,13 +91,13 @@ void handleSubscribeCommand(CommandContext &context)
     }
     myteams::Team &resolvedTeam = team->get();
     if (resolvedTeam.isUserSubscribed(resolvedUser.getUuid())) {
-        queueStatus(context, myteams::ERR_ALREADY_EXIST);
+        queueStatus(context, myteams::RPL_OK);
         return;
     }
 
     resolvedTeam.addSubscribedUser(std::string(resolvedUser.getUuid()));
     ServerLogger::logUserSubscribed(resolvedTeam.getUuid(), resolvedUser.getUuid());
-    queueStatus(context, myteams::RPL_OK);
+    queueUserInfo(context, resolvedUser);
 }
 
 void handleUnsubscribeCommand(CommandContext &context)
@@ -115,12 +121,12 @@ void handleUnsubscribeCommand(CommandContext &context)
     }
     myteams::Team &resolvedTeam = team->get();
     if (!resolvedTeam.removeSubscribedUser(resolvedUser.getUuid())) {
-        queueStatus(context, myteams::ERR_FORBIDDEN);
+        queueStatus(context, myteams::RPL_OK);
         return;
     }
 
     ServerLogger::logUserUnsubscribed(resolvedTeam.getUuid(), resolvedUser.getUuid());
-    queueStatus(context, myteams::RPL_OK);
+    queueUserInfo(context, resolvedUser);
 }
 
 void handleSubscribedListCommand(CommandContext &context)

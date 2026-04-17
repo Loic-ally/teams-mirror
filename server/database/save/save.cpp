@@ -120,7 +120,7 @@ writeLines(const std::filesystem::path &filePath, const std::vector<std::string>
 {
 	std::ofstream outputFile(filePath, std::ios::out | std::ios::trunc);
 	if (!outputFile.is_open()) {
-		std::cerr << "Failed to open save file: " << filePath << std::endl;
+		std::cout << "Failed to open save file: " << filePath << std::endl;
 		return false;
 	}
 	for (const std::string &line : lines)
@@ -142,7 +142,7 @@ DatabaseSaver::save(const std::vector<myteams::User> &users, const std::vector<m
 	std::error_code error;
 	std::filesystem::create_directories(_baseDirectory, error);
 	if (error) {
-		std::cerr << "Failed to create save directory: " << _baseDirectory << std::endl;
+		std::cout << "Failed to create save directory: " << _baseDirectory << std::endl;
 		return false;
 	}
 	const SerializedLines serialized = serializeData(users, teams, messages, _delimiter);

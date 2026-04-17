@@ -337,7 +337,7 @@ ServerManager::runPollLoop()
     clientSockets.clear();
     database::DatabaseSaver databaseSaver;
     if (!databaseSaver.save(_users, _teams, _messages)) {
-        std::cerr << "Server state could not be fully saved." << std::endl;
+        std::cout << "Server state could not be fully saved." << std::endl;
     }
 }
 

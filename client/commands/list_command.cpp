@@ -4,6 +4,7 @@
 #include "core/client.hpp"
 #include "display/printer.hpp"
 #include "parser/parser.hpp"
+#include "errors_utils.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -77,7 +78,7 @@ static void printRepliesList(const std::string &payload)
         replyPayload.reply_body);
 }
 
-static void handleListError(const std::uint16_t code)
+static void handleListError(const std::uint16_t code, Client &clientData)
 {
     if (code == myteams::ERR_UNAUTHORIZED) {
         Printer::errorUnauthorized();
@@ -88,8 +89,7 @@ static void handleListError(const std::uint16_t code)
         return;
     }
     if (code == myteams::ERR_NOT_FOUND) {
-        std::cout << "Requested context entity does not exist." << std::endl;
-        return;
+        return handleNotFound(clientData);
     }
     if (code == myteams::ERR_BAD_REQUEST) {
         std::cout << "Invalid context for /list." << std::endl;
@@ -122,7 +122,7 @@ void handleList(Client &clientData, ParsedInput &input)
             || responseHeader.code == myteams::ERR_FORBIDDEN
             || responseHeader.code == myteams::ERR_NOT_FOUND
             || responseHeader.code == myteams::ERR_BAD_REQUEST) {
-            handleListError(responseHeader.code);
+            handleListError(responseHeader.code, clientData);
             return;
         }
 
@@ -151,7 +151,7 @@ void handleList(Client &clientData, ParsedInput &input)
             continue;
         }
 
-        handleListError(responseHeader.code);
+        handleListError(responseHeader.code, clientData);
         return;
     }
 }
