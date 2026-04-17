@@ -76,6 +76,7 @@ std::int32_t runLoop(std::unique_ptr<utils::Socket> socket) {
     while (clientData.running) {
         handlingInput(clientData);
         handleEvent(clientData);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     return 0;
 }
