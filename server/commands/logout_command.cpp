@@ -52,6 +52,9 @@ void handleLogoutCommand(CommandContext &context)
     resolvedUser.removeLoggedIn();
     ServerLogger::logUserLoggedOut(resolvedUser.getUuid());
     queueStatus(context, myteams::RPL_OK);
+    const std::string selfEventPacket =
+        buildUserConnectionEventPacket(myteams::EVT_LOGGED_OUT, resolvedUser.getUuid(), resolvedUser.getName());
+    queuePacket(context.clientManager, context.clientFd, selfEventPacket);
     broadcastLoggedOutEvent(context.clientManager, context.authenticatedUsersByFd, resolvedUser);
 }
 
